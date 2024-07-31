@@ -1,10 +1,12 @@
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from uuid import UUID
 from .models import ScriberUsers
 from typing import Optional
 from uuid import uuid4
-
+import jwt
+from django.conf import settings
+from django.utils import timezone
 
 @dataclass
 class UserDataClass:
@@ -38,20 +40,52 @@ class UserDataClass:
         else: 
             return self.email.split('@')[0]
     
-def create(validated_data) -> UserDataClass:
+def create_user(validated_data) -> UserDataClass:
     user = ScriberUsers(email=validated_data.email, 
                         first_name=validated_data.first_name,
                         last_name=validated_data.last_name,
                         is_active=validated_data.is_active,
                         is_staff=validated_data.is_staff,
-                        is_superuser=validated_data.is_superuser,                        )
+                        is_superuser=validated_data.is_superuser,)
 
     if validated_data.password:
         user.set_password(validated_data.password)
-    
-    user.save()
+    try:
+        user.save()
+    except Exception as e:
+        raise ValueError(str(e))
     return UserDataClass.to_dict(user)
 
 def list_users() -> list[UserDataClass]:
     return [UserDataClass.to_dict(user) for user in ScriberUsers.objects.all()]
 
+def login_user(email: str, password: str) -> UserDataClass:
+    try:
+        user = ScriberUsers.objects.get(email=email)
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Invalid credentials")
+    
+    if user.check_password(password):
+        return UserDataClass.to_dict(user)
+    else:
+        raise ValueError("Invalid credentials")
+    
+def create_token(user: UserDataClass) -> str:
+    # update last_login ans is_active fields of the user model
+    user.last_login = timezone.now()
+    try:
+        scriber_user = ScriberUsers.objects.get(id=user.id)
+        scriber_user.last_login = timezone.now()
+        scriber_user.is_active = True
+        scriber_user.save()
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
+    
+    payload = dict(
+        id=user.id.hex, # convert UUID to its string value to be serializable
+        exp=datetime.now() + timedelta(hours=24),
+        iat=datetime.now(),
+    )
+    token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+
+    return token
