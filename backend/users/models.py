@@ -1,13 +1,13 @@
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-import uuid
+from uuid import uuid4
 from .managers import CustomUserManager
 
 
 class ScriberUsers(AbstractBaseUser, PermissionsMixin):
     username = None
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4)
+    id = models.UUIDField(primary_key=True, default=uuid4)
     email = models.EmailField(_("email address"), unique=True)
     password = models.CharField(_("password"), max_length=128)
     is_staff = models.BooleanField(_("the user is staff"), default=False)

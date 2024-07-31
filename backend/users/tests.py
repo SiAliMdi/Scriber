@@ -1,6 +1,6 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
-from django.db.utils import DataError
+# from django.db.utils import DataError
 
 class UsersManagersTests(TestCase):
 
