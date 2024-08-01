@@ -1,4 +1,4 @@
-from rest_framework import views, response #, exceptions
+from rest_framework import views, response, permissions #, exceptions
 from .serializers import UserSerializer
 from . import services
 
@@ -18,9 +18,13 @@ class RegisterUserApi(views.APIView):
             return response.Response(data=serializer.errors, status=400)
 
 
-class ListUserApi(views.APIView):
+class ListUsersApi(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request):
+        if not request.user.is_superuser:
+            return response.Response(data={"error": "Unauthorized"}, status=401)
         users = services.list_users()
         serializer = UserSerializer(users, many=True)
         return response.Response(data=serializer.data, status=200)

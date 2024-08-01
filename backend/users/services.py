@@ -7,6 +7,7 @@ from uuid import uuid4
 import jwt
 from django.conf import settings
 from django.utils import timezone
+from rest_framework import authentication, exceptions
 
 @dataclass
 class UserDataClass:
@@ -81,11 +82,33 @@ def create_token(user: UserDataClass) -> str:
     except ScriberUsers.DoesNotExist:
         raise ValueError("Unexisted user")
     
+    date_now = int(datetime.now().timestamp())
+    expiration_date = date_now + 24 * 60 * 60
+    # expiration_date = date_now + timedelta(hours=24)
     payload = dict(
         id=user.id.hex, # convert UUID to its string value to be serializable
-        exp=datetime.now() + timedelta(hours=24),
-        iat=datetime.now(),
+        exp=expiration_date,
+        iat=date_now,
     )
     token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
     return token
+
+class ScriberUserAuthentication(authentication.BaseAuthentication):
+    def authenticate(self, request):
+        token = request.COOKIES.get("jwt")
+
+        if not token:
+            return None
+
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        except:
+            raise exceptions.AuthenticationFailed("Unauthorized")
+        
+        try:
+            user = ScriberUsers.objects.get(id=payload["id"])
+        except ScriberUsers.DoesNotExist:
+            raise exceptions.AuthenticationFailed("User not found")
+        
+        return (user, None)
