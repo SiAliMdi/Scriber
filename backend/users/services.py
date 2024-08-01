@@ -112,3 +112,26 @@ class ScriberUserAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed("User not found")
         
         return (user, None)
+
+
+def logout_user(user_email: str) -> None:
+    try:
+        user = ScriberUsers.objects.get(email=user_email)
+        user.is_active = False
+        user.save()
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
+
+def get_user(user_email: str) -> UserDataClass:
+    try:
+        user = ScriberUsers.objects.get(email=user_email)
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
+    return UserDataClass.to_dict(user)
+
+def delete_user(user_email: str) -> None:
+    try:
+        user = ScriberUsers.objects.get(email=user_email)
+        user.delete()
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
