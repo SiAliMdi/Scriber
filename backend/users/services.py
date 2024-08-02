@@ -129,6 +129,15 @@ def get_user(user_email: str) -> UserDataClass:
         raise ValueError("Unexisted user")
     return UserDataClass.to_dict(user)
 
+def update_user(user_email: str, is_staff: bool) -> UserDataClass:
+    try:
+        user = ScriberUsers.objects.get(email=user_email)
+        user.is_staff = is_staff
+        user.save()
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
+    return UserDataClass.to_dict(user)
+
 def delete_user(user_email: str) -> None:
     try:
         user = ScriberUsers.objects.get(email=user_email)

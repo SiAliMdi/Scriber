@@ -16,8 +16,8 @@ class UsersManagersTests(TestCase):
         cls.user.save()
 
     def test_id(self):
-        self.assertIsNotNone(self.user.id)
-        self.assertEqual(self.user.id.__class__.__name__, "UUID")
+        self.assertIsNotNone(self.user.id) # type: ignore
+        self.assertEqual(self.user.id.__class__.__name__, "UUID") # type: ignore
 
     def test_date_joined(self):
         self.assertIsNotNone(self.user.date_joined)
@@ -27,10 +27,12 @@ class UsersManagersTests(TestCase):
         self.assertEqual(self.user.first_name, self.first_name)
         user2 = self.User.objects.create(email="t2@test.com", password="foo")
         user2.first_name = "a"*101
+        user2.last_name = "b"*101
         # if first/last_name > 100 => truncation, so no error should be raised
         # self.assertRaises(DataError, user2.save)
         user2.save()
         self.assertEqual(user2.first_name, "a"*100)
+        self.assertEqual(user2.last_name, "b"*100)
     
     def test_str(self):
         str_user = " ".join([self.first_name, self.last_name])
@@ -57,7 +59,7 @@ class UsersManagersTests(TestCase):
             self.User.objects.create(email="", password="foo")
 
     def test_create_superuser(self):
-        admin_user = self.User.objects.create_superuser(email="super@user.com", password="foo")
+        admin_user = self.User.objects.create_superuser(email="super@user.com", password="foo") # type: ignore
         self.assertEqual(admin_user.email, "super@user.com")
         self.assertTrue(admin_user.is_active)
         self.assertTrue(admin_user.is_staff)
@@ -71,4 +73,4 @@ class UsersManagersTests(TestCase):
             pass
         
         with self.assertRaises(ValueError):
-            self.User.objects.create_superuser(email="super@user.com", password="foo", is_superuser=False)
+            self.User.objects.create_superuser(email="super@user.com", password="foo", is_superuser=False) # type: ignore

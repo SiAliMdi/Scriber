@@ -4,6 +4,9 @@ from . import services
 
 
 class RegisterUserApi(views.APIView):
+
+    permission_classes = (permissions.AllowAny,)
+
     def post(self, request):
         serializer = UserSerializer(data=request.data)
         if serializer.is_valid():
@@ -31,12 +34,18 @@ class ListUsersApi(views.APIView):
     
 
 class LoginUserApi(views.APIView):
+    
+    permission_classes = (permissions.AllowAny,)
+    
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
         
         try:
             user = services.login_user(email, password)
+            # new user accounts should be validated by the admin before being able tologin
+            if not user.is_staff:
+                return response.Response(data={"error": "Unauthorized"}, status=401)
             token = services.create_token(user)
             response_ = response.Response(data={"message": "Login succeced"},status=200)
             response_.set_cookie(key="jwt", value=token, httponly=True)
@@ -62,6 +71,20 @@ class UserApi(views.APIView):
     def get(self, request):
         user = services.get_user(request.user.email)
         serializer = UserSerializer(user)
+        return response.Response(data=serializer.data, status=200)
+    
+    # update is_staff fields of the user model endpoint
+    def put(self, request):
+        if not request.user.is_superuser:
+            return response.Response(data={"error": "Unauthorized"}, status=401)
+        
+        email = request.data.get("email")
+        is_staff = request.data.get("is_staff")
+        try:
+            user = services.update_user(email, is_staff)
+            serializer = UserSerializer(user)
+        except Exception as e:
+            return response.Response(data={"error": str(e)}, status=400)
         return response.Response(data=serializer.data, status=200)
 
 
