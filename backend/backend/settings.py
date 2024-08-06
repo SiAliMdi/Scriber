@@ -140,7 +140,6 @@ DJANGO_COLORS = "error=red;warning=yellow;success=green;notice=magenta;link=blue
 # Some useful commands: py manage check --deploy
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8000",
+    getenv('FRONTEND_URL')
 ]
 CORS_ALLOW_CREDENTIALS = True

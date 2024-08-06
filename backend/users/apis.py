@@ -47,7 +47,10 @@ class LoginUserApi(views.APIView):
             if not user.is_staff:
                 return response.Response(data={"error": "Unauthorized"}, status=401)
             token = services.create_token(user)
-            response_ = response.Response(data={"message": "Login succeced"},status=200)
+            response_ = response.Response(data={"message": "Login succeced", 
+                                                "user": UserSerializer(user).data,
+                                                "token": token
+                                                },status=200)
             response_.set_cookie(key="jwt", value=token, httponly=True)
             return response_
         except Exception as e:
