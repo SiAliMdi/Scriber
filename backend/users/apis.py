@@ -103,3 +103,29 @@ class UserApi(views.APIView):
         except Exception as e:
             return response.Response(data={"error": str(e)}, status=400)
         return response.Response(status=200, data={"message": "User deleted successfully"})
+    
+
+class UserPasswordApi(views.APIView):
+    # authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        email = request.data.get("email")
+        password = request.data.get("password")
+        try:
+            services.check_password(email, password)
+        except Exception as e:
+            return response.Response(data={"error": str(e)}, status=400)
+        return response.Response(data={"message": "Password is correct"}, status=200)
+
+
+    def put(self, request):
+        email = request.user.email
+        old_password = request.data.get("old_password")
+        new_password = request.data.get("new_password")
+        try:
+            user = services.change_password(email, old_password, new_password)
+            serializer = UserSerializer(user)
+        except Exception as e:
+            return response.Response(data={"error": str(e)}, status=400)
+        return response.Response(data=serializer.data, status=200)

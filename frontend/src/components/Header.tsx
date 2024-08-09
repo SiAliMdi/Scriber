@@ -15,8 +15,12 @@ const Header = () => {
             <span> | </span>
             {user ? (
                 <p onClick={logoutUser}>Logout</p>
-            ) : (
+            ) : ( <div>
+
                 <Link to="/login" >Login</Link>
+                <span> | </span>
+                <Link to="/register">Register</Link>
+            </div>
             )}
             {user && <p>Hello {user.email.split('@')[0]}!</p>}
 

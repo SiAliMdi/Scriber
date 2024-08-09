@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import Header from './components/Header'
 
 import PrivateRoute from './utils/PrivateRoute'
+import RegisterPage from './pages/RegisterPage'
 
 
 
@@ -20,6 +21,7 @@ function App() {
                 <Route path="/" element={<PrivateRoute><HomePage/></PrivateRoute>
                   } />
                     <Route path="/login" element={<LoginPage/>}/>
+                    <Route path='/register' element={<RegisterPage/>}/>
                 </Routes>
                 </AuthProvider>
             </Router>
