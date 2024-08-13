@@ -1,19 +1,26 @@
-import { useContext } from "react";
-import AuthContext from "../state/context/AuthContext";
-import { AuthContextType } from "../@types/Auth.t";
+import { Link } from "react-router-dom";
+import { getUser } from "../utils/utilities";
+import { useEffect, useState } from "react";
+import { User } from "../@types/user";
 
 const HomePage = () => {
-    const { user } = useContext(AuthContext) as AuthContextType;
-    console.log(`HomePage user: ${user?.dateJoined} ${user?.email} ${user?.firstName} `)
+    const  [user, setUser]  = useState<User>(null);
+    useEffect(() => {
+        getUser().then((response) => {
+            setUser(response);
+        });
+    }, [])
+    
     return (
         user ? (
         <h1>
-            Welcome to Scriber!
+            Welcome {user.firstName} to Scriber!
         </h1>
         ):(
-        <h1>
-            Please login to access Scriber!
-        </h1>
+            <>
+        <Link to="/login">Login</Link>
+        <p>{user}</p>
+            </>
         )
     )
 }
