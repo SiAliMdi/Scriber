@@ -144,3 +144,18 @@ def delete_user(user_email: str) -> None:
         user.delete()
     except ScriberUsers.DoesNotExist:
         raise ValueError("Unexisted user")
+
+def check_password(user_email: str, password: str) -> bool:
+    try:
+        user = ScriberUsers.objects.get(email=user_email, password=password)
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
+    return True
+    
+def change_password(user_email: str, password: str, new_password: str) -> None:
+    try:
+        user = ScriberUsers.objects.get(email=user_email, password=password)
+        user.set_password(new_password)
+        user.save()
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Unexisted user")
