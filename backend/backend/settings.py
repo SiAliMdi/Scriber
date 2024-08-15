@@ -47,15 +47,29 @@ INSTALLED_APPS = [
     'users'
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'users.services.ScriberUserAuthentication',
+    ),
+}
+
+DEFAULT_AUTHENTICATION_CLASSES = ( 
+    'users.services.ScriberUserAuthentication',
+)
+
+AUTHENTICATION_BACKENDS = [
+    'users.services.ScriberUserAuthentication',
+]
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'backend.settings.LogMiddleware'
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -143,3 +157,16 @@ CORS_ALLOWED_ORIGINS = [
     getenv('FRONTEND_URL')
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+class LogMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print(f"Request Method: {request.method},\n \
+              Path: {request.path},\n \
+              Headers: {request.headers} \n \
+              Body: {request.body}")
+        response = self.get_response(request)
+        print(f"Response Status Code: {response.status_code}")
+        return response

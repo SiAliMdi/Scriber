@@ -2,7 +2,6 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { SliceState } from '../../@types/state';
 import axios from 'axios';
 
-
 export const loginUser = createAsyncThunk( 'user/loginUser', async (data: { email: string, password: string }, thunkAPI) => {
     try {
         const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'login/', data);
@@ -10,13 +9,34 @@ export const loginUser = createAsyncThunk( 'user/loginUser', async (data: { emai
         
         sessionStorage.setItem('token', response.token);
         sessionStorage.setItem('user', JSON.stringify(response.user));
+        // Cookies.set('jwt', response.token);
         return {user: response.user, token: response.token};
-        
         
 } catch (error) {
         return thunkAPI.rejectWithValue({ error });
     }
 } );
+
+export const logoutUser = createAsyncThunk('user/logoutUser', async (data: {}, thunkAPI) => {
+    try {
+        const token = sessionStorage.getItem('token');
+          const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'logout/', {}, {
+            headers: {
+                'Authorization': `${token}`,
+            },
+            withCredentials: true,
+        }); 
+        const response = request.data;
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
+        return response;
+    } catch (error) {
+        return thunkAPI.rejectWithValue({ error });
+    }
+}   );
+
+
+
 const initialState: SliceState = { loading: false, user: null, error: null };
 
 const userSlice = createSlice({

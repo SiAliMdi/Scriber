@@ -36,5 +36,19 @@ const getUser = async (): Promise<User | null> =>  {
         return null;
     }
 
-
-export { getUser };
+const  getCookie = (name: string) => {
+    var cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            // trim whithout jQuery
+            var cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+export { getUser, getCookie };

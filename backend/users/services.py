@@ -8,6 +8,7 @@ import jwt
 from django.conf import settings
 from django.utils import timezone
 from rest_framework import authentication, exceptions
+from django.contrib.auth import authenticate, login, logout
 
 @dataclass
 class UserDataClass:
@@ -60,13 +61,16 @@ def create_user(validated_data) -> UserDataClass:
 def list_users() -> list[UserDataClass]:
     return [UserDataClass.to_dict(user) for user in ScriberUsers.objects.all()]
 
-def login_user(email: str, password: str) -> UserDataClass:
+def login_user(request, email: str, password: str) -> UserDataClass:
     try:
         user = ScriberUsers.objects.get(email=email)
     except ScriberUsers.DoesNotExist:
         raise ValueError("Invalid credentials")
     
     if user.check_password(password):
+        ScriberUserAuthentication().authenticate(request)
+        login(request, user)
+        authenticate(request, email=email, password=password)
         return UserDataClass.to_dict(user)
     else:
         raise ValueError("Invalid credentials")
@@ -96,7 +100,8 @@ def create_token(user: UserDataClass) -> str:
 
 class ScriberUserAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
-        token = request.COOKIES.get("jwt")
+        # request.META.get("HTTP_AUTHORIZATION") || request.COOKIES.get("jwt")
+        token = request.headers.get("Authorization")
 
         if not token:
             return None
@@ -113,12 +118,12 @@ class ScriberUserAuthentication(authentication.BaseAuthentication):
         
         return (user, None)
 
-
-def logout_user(user_email: str) -> None:
+def logout_user(request, user_email: str) -> None:
     try:
         user = ScriberUsers.objects.get(email=user_email)
         user.is_active = False
         user.save()
+        logout(request)
     except ScriberUsers.DoesNotExist:
         raise ValueError("Unexisted user")
 
