@@ -47,15 +47,29 @@ INSTALLED_APPS = [
     'users'
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'users.services.ScriberUserAuthentication',
+    ),
+}
+
+DEFAULT_AUTHENTICATION_CLASSES = ( 
+    'users.services.ScriberUserAuthentication',
+)
+
+AUTHENTICATION_BACKENDS = [
+    'users.services.ScriberUserAuthentication',
+]
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # 'backend.settings.LogMiddleware'
 ]
 
 ROOT_URLCONF = 'backend.urls'
@@ -140,7 +154,19 @@ DJANGO_COLORS = "error=red;warning=yellow;success=green;notice=magenta;link=blue
 # Some useful commands: py manage check --deploy
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://localhost:8000",
+    getenv('FRONTEND_URL')
 ]
 CORS_ALLOW_CREDENTIALS = True
+
+class LogMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        print(f"Request Method: {request.method},\n \
+              Path: {request.path},\n \
+              Headers: {request.headers} \n \
+              Body: {request.body}")
+        response = self.get_response(request)
+        print(f"Response Status Code: {response.status_code}")
+        return response
