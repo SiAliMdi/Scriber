@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { getUser } from "../utils/utilities";
 import { useEffect, useState } from "react";
 import { User } from "../@types/user";
@@ -13,7 +13,7 @@ const HomePage = () => {
     const dispatch = useDispatch<UserDispatch>();
 
     const handleLogout = () => {
-        dispatch(logoutUser({})).then(() => { 
+        dispatch(logoutUser()).then(() => { 
             navigate('/login');
             setUser(null);
             sessionStorage.removeItem('token');
@@ -21,12 +21,13 @@ const HomePage = () => {
             console.log("logged out1");
         }
     );
-        // navigate('/login');
-        // setUser(null);
     }
     useEffect(() => {
         getUser().then((response) => {
             setUser(response);
+            if (!response) {
+                navigate('/login');
+            }
         });
     }, [])
     
@@ -38,11 +39,7 @@ const HomePage = () => {
         </h1>
         <button type="button" onClick={handleLogout}>Logout</button>
             </>
-        ):(
-            <>
-        <Link to="/login">Login</Link>
-            </>
-        )
+        ):<></>
     )
 }
 
