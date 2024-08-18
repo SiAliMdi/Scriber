@@ -25,11 +25,11 @@ const Header = (props: User) => {
     }
     
     return (
-      <header className="h-16 bg-blue-500 md:h-20 lg:h-24 flex items-center justify-between px-4">
-            <div className="text-white text-lg md:text-xl lg:text-2xl">
+      <header className="h-12 bg-blue-500 md:h-20 lg:h-14 flex items-center justify-between px-4">
+            <div className="text-white text-lg md:text-xl lg:text-2xl hover:cursor-pointer" onClick={() => navigate('/')}>
                 Scriber
             </div>
-            <nav className="text-white flex items-center justify-between w-full">
+            <nav className="text-white flex items-center justify-between w-full" onClick={() => setDropdownOpen(!dropdownOpen)}>
                 <ul className="flex space-x-4 mx-auto">
                     <li><a href="" className="hover:underline">Categories datasets</a></li>
                 </ul>
@@ -56,13 +56,13 @@ const Header = (props: User) => {
                             ></path>
                         </svg>
                     </button>
+                    {/** Drop down list */}
                     {dropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-20">
-                            {user?.isSuperuser && ( 
-                                <a  className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Users</a>
+                            {user?.isSuperUser && ( 
+                                <a onClick={e => {navigate('/users')}}  className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Users</a>
                             )
                             }
-                            <a  className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Profile</a>
                             <a onClick={handleLogout}  className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Logout</a>
                         </div>
                     )}

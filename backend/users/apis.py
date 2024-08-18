@@ -35,6 +35,7 @@ class ListUsersApi(views.APIView):
             return response.Response(data={"error": "Unauthorized"}, status=401)
         users = services.list_users()
         serializer = UserSerializer(users, many=True)
+        # print(f"{serializer.data = }")
         return response.Response(data=serializer.data, status=200)
     
 
