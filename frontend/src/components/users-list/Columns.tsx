@@ -2,8 +2,15 @@ import { User } from "@/@types/user";
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import DataTableRowActions from "../ui/DataTableRowActions";
 
-const columns: ColumnDef<User>[] = [
+
+export interface UsersColumnsProps {
+    onEdit: (value: User) => void;
+    onDelete: (value: User) => void;
+}
+
+const getColumns = ({ onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] => [
     {
         header: ({ column }) => {
             return (
@@ -44,7 +51,7 @@ const columns: ColumnDef<User>[] = [
         header: ({ column }) => {
             return (
                 <Button
-                    className="text-left font-bold"
+                    className="text-left font-bold h-1"
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
@@ -53,6 +60,7 @@ const columns: ColumnDef<User>[] = [
                 </Button>
             )
         },
+        size: 10,
         id: "activated",
         accessorFn: row => row?.isStaff ? "Yes" : "No",
         meta: {
@@ -85,6 +93,11 @@ const columns: ColumnDef<User>[] = [
         },
 
     },
-
+    {
+        // header: "Actions",
+        id: "actions",
+        cell: ({ row }) => { return <DataTableRowActions row={row} onEdit={onEdit} onDelete={onDelete}/> },
+        size: 10,
+    }
 ]
-export default columns;
+export default getColumns;

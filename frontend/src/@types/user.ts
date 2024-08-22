@@ -12,6 +12,6 @@ type User = {
     lastName?: string;
     dateJoined?: Date;
     lastLogin?: Date;
-} | null;
+};// | null;
 
 export type { User };

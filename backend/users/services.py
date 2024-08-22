@@ -146,6 +146,8 @@ def update_user(user_email: str, is_staff: bool) -> UserDataClass:
 def delete_user(user_email: str) -> None:
     try:
         user = ScriberUsers.objects.get(email=user_email)
+        if user.is_superuser:
+            raise ValueError("Cannot delete superuser")
         user.delete()
     except ScriberUsers.DoesNotExist:
         raise ValueError("Unexisted user")

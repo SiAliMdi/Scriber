@@ -21,14 +21,16 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import {  useState } from "react"
+import { CSSProperties, useState } from "react"
 import { PaginationState } from "@/@types/pagination"
-import  Filter  from "@/components/ui/filter"
+import Filter from "@/components/ui/filter"
 
 interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
 }
+
+const DEFAULT_TABLE_COLUMN_WIDTH = 150;
 
 export function DataTable<TData, TValue>({
   columns,
@@ -78,12 +80,14 @@ export function DataTable<TData, TValue>({
       </div> */}
       <div className="rounded-md border">
         <Table>
-          <TableHeader>
+          <TableHeader className="h-1">
             {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
+              <TableRow key={headerGroup.id} className="h-1">
                 {headerGroup.headers.map((header) => {
+                  const style: CSSProperties = header.getSize() !== DEFAULT_TABLE_COLUMN_WIDTH
+                    ? { width: `${header.getSize()}px` } : {}
                   return (
-                    <TableHead key={header.id} className="border-2 border-gray-300">
+                    <TableHead key={header.id} style={style} className="border-2 border-gray-300 h-1">
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -130,6 +134,7 @@ export function DataTable<TData, TValue>({
         </Table>
         <hr className="h-2" />
         <div className="flex items-center gap-2 justify-end space-x-2 py-4 mr-4">
+         Total elements: <strong>{table.getPrePaginationRowModel().rows?.length}</strong>
           <Button
             // className="border rounded p-1"
             variant="outline"
