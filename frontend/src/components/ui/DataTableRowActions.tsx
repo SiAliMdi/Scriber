@@ -8,20 +8,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import DialogDemo from '../users-list/EditDialog';
+import EditDialog, { EditDialogProps } from '../users-list/EditDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
+  setUsers: (value: TData[]) => void;
   onEdit: (value: TData) => void;
   onDelete: (value: TData) => void;
 }
 
 
-const DataTableRowActions = <TData,>({ row, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
-  const handleEditClick = (event: { stopPropagation: () => void; }) => {
-    event.stopPropagation();
-    onEdit(row.original);
-  };
+
+const DataTableRowActions = <TData,>({ row, setUsers, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
       <DropdownMenu>
@@ -31,14 +29,13 @@ const DataTableRowActions = <TData,>({ row, onEdit, onDelete }: DataTableRowActi
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {/* <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onEdit(row.original)}> */}
-          <DropdownMenuItem className="hover:cursor-pointer" onClick={handleEditClick}>
+          <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
+          <EditDialog {...{ row: row, onEdit: onEdit,  setUsers: setUsers } as EditDialogProps<TData>} />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Delete</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <DialogDemo />
     </div>
   );
 };

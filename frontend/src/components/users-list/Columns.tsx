@@ -6,11 +6,12 @@ import DataTableRowActions from "../ui/DataTableRowActions";
 
 
 export interface UsersColumnsProps {
+    setUsers: (value: User[]) => void;
     onEdit: (value: User) => void;
     onDelete: (value: User) => void;
 }
 
-const getColumns = ({ onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] => [
+const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] => [
     {
         header: ({ column }) => {
             return (
@@ -96,7 +97,7 @@ const getColumns = ({ onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] 
     {
         // header: "Actions",
         id: "actions",
-        cell: ({ row }) => { return <DataTableRowActions row={row} onEdit={onEdit} onDelete={onDelete}/> },
+        cell: ({ row }) => { return <DataTableRowActions row={row} setUsers={setUsers} onEdit={onEdit} onDelete={onDelete} /> },
         size: 10,
     }
 ]

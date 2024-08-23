@@ -22,20 +22,20 @@ const Users = () => {
   }, []);
 
   const onDelete = useCallback((value: User) => {
-      deleteUser(value).then(() => {
-        console.log("User deleted");
-        fetchUsers(setUsers);
-      }
-      ).catch((error) => {
-        console.error(error + " not deleted");
-      }
-      );
-   
+    deleteUser(value).then(() => {
+      console.log("User deleted");
+      fetchUsers(setUsers);
+    }
+    ).catch((error) => {
+      console.error(error + " not deleted");
+    }
+    );
+
   }, []);
 
 
   useMemo(() =>
-    setColumns(getColumns({ onEdit: onEdit, onDelete: onDelete })),
+    setColumns(getColumns({setUsers:setUsers, onEdit: onEdit, onDelete: onDelete })),
     [onEdit, onDelete]);
 
   useEffect(() => {

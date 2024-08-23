@@ -10,18 +10,54 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Row } from "@tanstack/react-table"
+import { Switch } from "@/components/ui/switch"
+import { useState } from "react"
+import { activateUser } from "@/services/UsersServices"
 
-const DialogDemo = () => {
+interface EditDialogProps<TData> {
+    row: Row<TData>;
+    onEdit: (value: TData) => void;
+    setUsers: (value: TData[]) => void;
+}
+
+const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) => {
+
+    const [isStaff, setIsStaff] = useState(row.original.isStaff);
+
+    const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+        event.preventDefault();
+        row.original.isStaff = isStaff;
+        activateUser(row.original).then((response) => {
+            console.log(response, "User activated");
+            setUsers((prev: TData[]) => {
+                const index = prev.findIndex(u => u.id === row.original.id);
+                prev[index] = row.original;
+                return [...prev];});
+
+        }
+        ).catch((error) => {
+            console.error(error, "User not activated");
+        }
+        );
+    }
+
     return (
-        <Dialog>
+        (<Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline">Edit</Button>
+                <span className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-[#f5f5f5] hover:cursor-pointer">
+                    Edit
+                </span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Edit profile</DialogTitle>
+                    <DialogTitle>Edit user</DialogTitle>
                     <DialogDescription>
-                        Make changes to your profile here. Click save when you're done.
+                        Activate/Deactivate user here by toggling the switch.
+                        <br />
+                        Deactivated users will not be able to log in.
+                        <br />
+                        Click save when you're done.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
@@ -30,28 +66,45 @@ const DialogDemo = () => {
                             Name
                         </Label>
                         <Input
+                            disabled
+                            value={row.original.firstName + " " + row.original.lastName}
                             id="name"
                             defaultValue="Pedro Duarte"
                             className="col-span-3"
                         />
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
-                        <Label htmlFor="username" className="text-right">
-                            Username
+                        <Label htmlFor="email" className="text-right">
+                            Email
                         </Label>
                         <Input
-                            id="username"
+                            disabled
+                            value={row.original.email}
+                            id="email"
                             defaultValue="@peduarte"
                             className="col-span-3"
                         />
                     </div>
+                    <div>
+                        <Label htmlFor="activated" className="text-right mr-4">
+                            Activated
+                        </Label>
+                        <Switch
+                            id="activated"
+                            className="col-span-3"
+                            defaultChecked={row.original.isStaff}
+                            onCheckedChange={(checked) => setIsStaff(checked)}
+                            checked={isStaff}
+                        />
+                    </div>
                 </div>
                 <DialogFooter>
-                    <Button type="submit">Save changes</Button>
+                    <Button type="submit" onClick={handleSave}>Save changes</Button>
                 </DialogFooter>
             </DialogContent>
-        </Dialog>
+        </Dialog>)
     )
 }
 
-export default DialogDemo;
+export default EditDialog;
+export type { EditDialogProps };
