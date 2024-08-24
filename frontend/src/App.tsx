@@ -1,21 +1,31 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import HomePage from './pages/HomePage'
+import BasePage from './pages/BasePage'
 import LoginPage from './pages/LoginPage'
-
+import Users from './pages/Users'
+import './index.css'
 import RegisterPage from './pages/RegisterPage'
+import React from 'react'
+// import '@fontsource/roboto/300.css';
+// import '@fontsource/roboto/400.css';
+// import '@fontsource/roboto/500.css';
+// import '@fontsource/roboto/700.css';
 
-function App() {
+
+const  App: React.FC = () => {
     return (
         <div className="App">
+            
             <Router>
-
                 <Routes>
-                <Route path="/" element={<HomePage/>}/>
+                
+                    <Route path="/" element={<BasePage/>} /> 
+                    <Route path='/users' element={<Users/>}/>
+                
                     <Route path="/login" element={<LoginPage/>}/>
                     <Route path='/register' element={<RegisterPage/>}/>
                 </Routes>
-                
             </Router>
+            
         </div>
     );
 }

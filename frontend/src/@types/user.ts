@@ -4,14 +4,14 @@ type User = {
     password: string;
     id?: string;
 
-    isStaff?: boolean;
-    isSuperuser?: boolean;
-    isActive?: boolean;
+    isStaff: boolean;
+    isSuperUser: boolean;
+    isActive: boolean;
 
     firstName?: string;
     lastName?: string;
     dateJoined?: Date;
     lastLogin?: Date;
-} | null;
+};// | null;
 
 export type { User };
