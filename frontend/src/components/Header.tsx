@@ -9,29 +9,29 @@ import { logoutUser } from "../state/store/UserSlice";
 
 const Header = (props: User) => {
     const [dropdownOpen, setDropdownOpen] = useState(false);
-    const [user, setUser] = useState<User>(props);  
-    
+    const [user, setUser] = useState<User>(props);
+
     const navigate = useNavigate();
     const dispatch = useDispatch<UserDispatch>();
 
     const handleLogout = () => {
-        dispatch(logoutUser()).then(() => { 
+        dispatch(logoutUser()).then(() => {
             navigate('/login');
-            setUser(null);
+            setUser({} as User);
             sessionStorage.removeItem('token');
             sessionStorage.removeItem('user');
         }
-    );
+        );
     }
-    
+
     return (
-      <header className="h-12 bg-blue-500 md:h-20 lg:h-14 flex items-center justify-between px-4">
+        <header className="h-12 bg-blue-500 md:h-20 lg:h-14 flex items-center justify-between px-4">
             <div className="text-white text-lg md:text-xl lg:text-2xl hover:cursor-pointer" onClick={() => navigate('/')}>
                 Scriber
             </div>
-            <nav className="text-white flex items-center justify-between w-full" onClick={() => setDropdownOpen(!dropdownOpen)}>
+            <nav className="text-white flex items-center justify-between w-full" >
                 <ul className="flex space-x-4 mx-auto">
-                    <li><a href="" className="hover:underline">Categories datasets</a></li>
+                    <li><a href="/" className="hover:underline">Categories datasets</a></li>
                 </ul>
                 <div className="relative ml-auto">
                     <button
@@ -59,16 +59,16 @@ const Header = (props: User) => {
                     {/** Drop down list */}
                     {dropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-20">
-                            {user?.isSuperUser && ( 
-                                <a onClick={e => {navigate('/users')}}  className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Users</a>
+                            {user?.isSuperUser && (
+                                <a onClick={() => { navigate('/users') }} className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Users</a>
                             )
                             }
-                            <a onClick={handleLogout}  className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Logout</a>
+                            <a onClick={handleLogout} className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Logout</a>
                         </div>
                     )}
                 </div>
             </nav>
         </header>
     );
-  }
+}
 export default Header;

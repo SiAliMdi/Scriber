@@ -14,6 +14,8 @@ import { Row } from "@tanstack/react-table"
 import { Switch } from "@/components/ui/switch"
 import { useState } from "react"
 import { activateUser } from "@/services/UsersServices"
+import { useToast } from "@/components/ui/use-toast"
+import cloneDeep from 'lodash/cloneDeep';
 
 interface EditDialogProps<TData> {
     row: Row<TData>;
@@ -24,22 +26,36 @@ interface EditDialogProps<TData> {
 const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) => {
 
     const [isStaff, setIsStaff] = useState(row.original.isStaff);
+    const { toast } = useToast();
 
     const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         event.preventDefault();
-        row.original.isStaff = isStaff;
-        activateUser(row.original).then((response) => {
-            console.log(response, "User activated");
-            setUsers((prev: TData[]) => {
-                const index = prev.findIndex(u => u.id === row.original.id);
-                prev[index] = row.original;
-                return [...prev];});
+        const user = cloneDeep(row.original);
+        user.isStaff = isStaff;
 
-        }
-        ).catch((error) => {
-            console.error(error, "User not activated");
-        }
-        );
+        activateUser(user).then((response) => {
+            if (response === 200) {
+                setUsers((prev: TData[]) => {
+                    const index = prev.findIndex(u => u.id === user.id);
+                    prev[index] = user;
+                    return [...prev];
+                });
+                toast({
+                    title: "User edit success",
+                    duration: 3000,
+                    description: `User ${row.original.firstName} ${row.original.lastName} ${isStaff ? "activated" : "deactivated"}`,
+                    // className: "bg-accent-foreground text-accent",
+                    className: "text-green-700",
+                });
+            } else {
+                toast({
+                    variant: "destructive",
+                    duration: 5000,
+                    title: "User edit failed",
+                    description: `User ${row.original.firstName} ${row.original.lastName} could not be edited`,
+                });
+            }
+        }).catch(() => {});
     }
 
     return (

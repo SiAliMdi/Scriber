@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import EditDialog, { EditDialogProps } from '../users-list/EditDialog';
+import { useState } from 'react';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -20,6 +21,7 @@ interface DataTableRowActionsProps<TData> {
 
 
 const DataTableRowActions = <TData,>({ row, setUsers, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
+  
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
       <DropdownMenu>
@@ -31,7 +33,7 @@ const DataTableRowActions = <TData,>({ row, setUsers, onEdit, onDelete }: DataTa
         <DropdownMenuContent align="end">
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
-          <EditDialog {...{ row: row, onEdit: onEdit,  setUsers: setUsers } as EditDialogProps<TData>} />
+          <EditDialog {...{ row: row, onEdit: onEdit, setUsers: setUsers, } as EditDialogProps<TData>} />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Delete</DropdownMenuItem>
         </DropdownMenuContent>
