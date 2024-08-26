@@ -1,0 +1,9 @@
+from django.urls import path
+
+from . import apis
+
+app_name = "{{ app_name }}"
+
+urlpatterns = [
+    path("", apis.home.as_view(), name="{{ app_name }}_home"),
+]

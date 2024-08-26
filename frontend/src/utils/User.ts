@@ -18,7 +18,7 @@ const getUser = async (): Promise<User | null> =>  {
         };
         
         try {
-            let response = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'user_password/',  {
+            let response = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'users/user_password/',  {
                 email: resultUser.email,
                 password: resultUser.password
             });

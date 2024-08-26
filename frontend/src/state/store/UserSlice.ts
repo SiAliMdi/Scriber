@@ -4,7 +4,7 @@ import axios from 'axios';
 
 export const loginUser = createAsyncThunk( 'user/loginUser', async (data: { email: string, password: string }, thunkAPI) => {
     try {
-        const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'login/', data);
+        const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'users/login/', data);
         const response = request.data;
         
         sessionStorage.setItem('token', response.token);
@@ -20,7 +20,7 @@ export const loginUser = createAsyncThunk( 'user/loginUser', async (data: { emai
 export const logoutUser = createAsyncThunk('user/logoutUser', async ({}, thunkAPI) => {
     try {
         const token = sessionStorage.getItem('token');
-          const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'logout/', {}, {
+          const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'users/logout/', {}, {
             headers: {
                 'Authorization': `${token}`,
             },
