@@ -31,7 +31,7 @@ const Header = (props: User) => {
             </div>
             <nav className="text-white flex items-center justify-between w-full" >
                 <ul className="flex space-x-4 mx-auto">
-                    <li><a href="/" className="hover:underline">Categories datasets</a></li>
+                    <li><a href="/" className="hover:underline">Catégories des demandes</a></li>
                 </ul>
                 <div className="relative ml-auto">
                     <button
@@ -60,10 +60,10 @@ const Header = (props: User) => {
                     {dropdownOpen && (
                         <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-20">
                             {user?.isSuperUser && (
-                                <a onClick={() => { navigate('/users') }} className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Users</a>
+                                <a onClick={() => { navigate('/users') }} className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Utilisateurs</a>
                             )
                             }
-                            <a onClick={handleLogout} className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Logout</a>
+                            <a onClick={handleLogout} className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Déconnexion</a>
                         </div>
                     )}
                 </div>

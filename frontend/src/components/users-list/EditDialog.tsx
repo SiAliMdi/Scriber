@@ -43,7 +43,7 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
                 toast({
                     title: "User edit success",
                     duration: 3000,
-                    description: `User ${row.original.firstName} ${row.original.lastName} ${isStaff ? "activated" : "deactivated"}`,
+                    description: `User ${row.original.firstName} ${row.original.lastName} ${isStaff ? "Activé" : "Désactivé"}`,
                     // className: "bg-accent-foreground text-accent",
                     className: "text-green-700",
                 });
@@ -51,8 +51,8 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
                 toast({
                     variant: "destructive",
                     duration: 5000,
-                    title: "User edit failed",
-                    description: `User ${row.original.firstName} ${row.original.lastName} could not be edited`,
+                    title: "Échec de la modification de l'utilisateur",
+                    description: `L'utilisateur ${row.original.firstName} ${row.original.lastName} n'a pas pu être édité.`,
                 });
             }
         }).catch(() => {});
@@ -62,24 +62,24 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
         (<Dialog>
             <DialogTrigger asChild>
                 <span className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-[#f5f5f5] hover:cursor-pointer">
-                    Edit
+                    Modifier
                 </span>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Edit user</DialogTitle>
+                    <DialogTitle>Modifier l'utilisateur</DialogTitle>
                     <DialogDescription>
-                        Activate/Deactivate user here by toggling the switch.
+                    Activer/désactiver l'utilisateur ici en basculant le switch.
                         <br />
-                        Deactivated users will not be able to log in.
+                        Les utilisateurs désactivés ne pourront plus se connecter.
                         <br />
-                        Click save when you're done.
+                        Cliquez sur enregistrer lorsque vous avez terminé.
                     </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="name" className="text-right">
-                            Name
+                            Nom complet
                         </Label>
                         <Input
                             disabled
@@ -91,7 +91,7 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
                     </div>
                     <div className="grid grid-cols-4 items-center gap-4">
                         <Label htmlFor="email" className="text-right">
-                            Email
+                            Adresse électronique
                         </Label>
                         <Input
                             disabled
@@ -103,7 +103,7 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
                     </div>
                     <div>
                         <Label htmlFor="activated" className="text-right mr-4">
-                            Activated
+                            Compte activé
                         </Label>
                         <Switch
                             id="activated"
@@ -115,7 +115,7 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button type="submit" onClick={handleSave}>Save changes</Button>
+                    <Button type="submit" onClick={handleSave}>Enregistrer les modifications</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>)

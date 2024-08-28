@@ -2,8 +2,11 @@ from django.contrib import admin
 from .models import *
 
 
-class DecisionsAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in DecisionsModel._meta.fields]
+class RawDecisionsAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in RawDecisionsModel._meta.fields]
 
+class DatasetsDecisionsAdmin(admin.ModelAdmin):
+    list_display = [f.name for f in DatasetsDecisionsModel._meta.fields]
 
-admin.site.register(DecisionsModel, DecisionsAdmin)
+admin.site.register(RawDecisionsModel, RawDecisionsAdmin)
+admin.site.register(DatasetsDecisionsModel, DatasetsDecisionsAdmin)

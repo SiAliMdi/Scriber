@@ -33,7 +33,7 @@ const Users = () => {
           description: `User ${value.firstName} ${value.lastName} deleted`,
           className: "text-green-700",
         });
-      } else {  
+      } else {
         toast({
           variant: "destructive",
           duration: 3000,
@@ -41,7 +41,7 @@ const Users = () => {
           description: `User ${value.firstName} ${value.lastName} could not be deleted`,
         });
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }, [toast]);
 
 
@@ -53,12 +53,12 @@ const Users = () => {
     fetchUsers(setUsers);
   }, [])
 
-  return <>
+  return <div className="xl:w-screen">
     {<BasePage />}
-    <div className="container mx-auto py-10 max-h-screen overflow-scroll">
+    <div className="container mx-auto py-10 max-h-screen overflow-scroll xl:w-full">
       <DataTable columns={columns} data={users} />
     </div>
-  </>;
+  </div>;
 };
 
 export default Users;
