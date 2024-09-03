@@ -63,6 +63,10 @@ const Header = (props: User) => {
                                 <a onClick={() => { navigate('/users') }} className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Utilisateurs</a>
                             )
                             }
+                            {/*user?.isSuperUser && (
+                                <a href={`${import.meta.env.VITE_BACKEND_APP_URL}admin`} className="block px-4 py-2 text-gray-800 hover:bg-gray-200 hover:cursor-pointer" >Page d'administration</a>
+                            )*/
+                            }
                             <a onClick={handleLogout} className="block px-4 py-2 text-gray-800 bg-red-500 hover:bg-gray-200 hover:cursor-pointer">Déconnexion</a>
                         </div>
                     )}

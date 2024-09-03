@@ -85,6 +85,10 @@ def delete_category(id):
     try:
         category = CategoriesModel.objects.get(pk=id)
         category.deleted = True
+        for cat in CategoriesModel.objects.filter(deleted=False, serial_number__gt=category.serial_number):
+            cat.serial_number -= 1
+            cat.save()
+        category.serial_number = 0
     except CategoriesModel.DoesNotExist:
         raise ValueError("Category not found")
     category.save()
