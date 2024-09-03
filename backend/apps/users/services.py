@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime#, timedelta
 from uuid import UUID
 from .models import ScriberUsers
 from typing import Optional
@@ -38,9 +38,9 @@ class UserDataClass:
         
     def __str__(self):
         if self.first_name and self.last_name:
-            return " ".join([self.first_name, self.last_name]) 
+            return " ".join([str(self.id), self.first_name, self.last_name]) 
         else: 
-            return self.email.split('@')[0]
+            return " ".join([str(self.id), self.email.split('@')[0]])
     
 def create_user(validated_data) -> UserDataClass:
     user = ScriberUsers(email=validated_data.email, 

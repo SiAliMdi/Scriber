@@ -51,6 +51,7 @@ DEFAULT_AUTHENTICATION_CLASSES = (
 )
 
 AUTHENTICATION_BACKENDS = [
+    #  'django.contrib.auth.backends.ModelBackend',
     'apps.users.services.ScriberUserAuthentication',
 ]
 MIDDLEWARE = [

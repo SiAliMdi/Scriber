@@ -52,3 +52,23 @@ class PromptsModel(models.Model):
         db_table = "prompts"
         ordering = ['prompt']
         indexes = [ models.Index(fields=['prompt'])]
+
+class BinaryTrainingsModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4)
+    model = models.ForeignKey('BinaryClassificationModelsModel', on_delete=models.DO_NOTHING, related_name='training_model')
+    # prompt = models.ForeignKey('PromptsModel', on_delete=models.DO_NOTHING, related_name='training_prompt')
+    dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='training_dataset')
+    training_status = models.CharField(max_length=255, blank=False, null=False, default="pending")
+    training_result = models.JSONField(blank=True, null=True, default=None)
+    training_log = models.TextField(blank=True, null=True, default="", max_length=32_768)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='trainings_creator')
+
+    objects = models.Manager()
+
+    class Meta:
+        db_table = "binary_trainings"
+        ordering = ['model', ]
+        indexes = [ models.Index(fields=['model', ])]

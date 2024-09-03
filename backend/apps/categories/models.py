@@ -10,7 +10,7 @@ class CustomIncrementalField(models.PositiveIntegerField):
 
     def pre_save(self, model_instance, add):
         if add:
-            last_value = model_instance.__class__.objects.aggregate(models.Max('incremental_field')).get('incremental_field__max')
+            last_value = model_instance.__class__.objects.aggregate(models.Max('serial_number')).get('serial_number__max')
             value = 1 if last_value is None else last_value + 1
             setattr(model_instance, self.attname, value)
             return value
@@ -32,12 +32,12 @@ class CategoriesModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='categories_creator')
-    updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='categories_updater')
-
+    updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='categories_updater', null=True, blank=True)
+    deleted = models.BooleanField(default=False, blank=True, null=True, )
     objects = models.Manager()
 
     def __str__(self):
-        return f"{self.serial_number} - {self.nomenclature} - {self.code}"
+        return f"{str(self.id)} - {self.serial_number} - {self.nomenclature} - {self.code}"
     
     def clean(self) -> None:
         if not self.nomenclature:
@@ -63,9 +63,13 @@ class CategoriesModel(models.Model):
         verbose_name_plural = "Categories"
         db_table = "categories"
         ordering = ['-created_at']
-        indexes = [ models.Index(fields=['nomenclature', 'code', 'code', 'object',
-                                         'condition', 'norme', 'fondement',])]
-
-
-
+        indexes = [ 
+                   models.Index(fields=['nomenclature',]),
+                   models.Index(fields=[ 'code',]),
+                   models.Index(fields=[ 'object', ]),
+                   models.Index(fields=['condition',]),
+                   models.Index(fields=[ 'norme', ]),
+                   models.Index(fields=[ 'fondement',]),
+                   models.Index(fields=[ 'deleted']),
+                   ]
 

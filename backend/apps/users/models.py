@@ -26,12 +26,12 @@ class ScriberUsers(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         if self.first_name and self.last_name:
-            return " ".join([self.first_name, self.last_name]) 
+            return " ".join([str(self.id), self.first_name, self.last_name]) 
         else: 
-            return self.email.split('@')[0]
+            return " ".join([str(self.id), self.email.split('@')[0]])
 
     def get_full_name(self):
-        return f"{self.first_name} {self.last_name}"
+        return f"{str(self.id)} {self.first_name} {self.last_name}"
     
     def clean(self) -> None:
         if not self.email:
