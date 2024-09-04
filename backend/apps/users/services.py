@@ -9,6 +9,7 @@ from django.conf import settings
 from django.utils import timezone
 from rest_framework import authentication, exceptions
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.backends import BaseBackend
 
 @dataclass
 class UserDataClass:
@@ -99,6 +100,7 @@ def create_token(user: UserDataClass) -> str:
     return token
 
 class ScriberUserAuthentication(authentication.BaseAuthentication):
+# class ScriberUserAuthentication(BaseBackend):
     def authenticate(self, request):
         # request.META.get("HTTP_AUTHORIZATION") || request.COOKIES.get("jwt")
         token = request.headers.get("Authorization")
@@ -108,7 +110,7 @@ class ScriberUserAuthentication(authentication.BaseAuthentication):
 
         try:
             payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
-        except:
+        except jwt.ExpiredSignatureError:
             raise exceptions.AuthenticationFailed("Unauthorized")
         
         try:
@@ -117,6 +119,12 @@ class ScriberUserAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed("User not found")
         
         return (user, None)
+            
+    def get_user(self, user_id):
+        try:
+            return ScriberUsers.objects.get(id=user_id)
+        except ScriberUsers.DoesNotExist:
+            return None
 
 def logout_user(request, user_email: str) -> None:
     try:

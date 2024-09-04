@@ -8,9 +8,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 load_dotenv(join(str(BASE_DIR),"local.env"))
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
-
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = getenv('SECRET_KEY')
 JWT_SECRET = getenv('JWT_SECRET')

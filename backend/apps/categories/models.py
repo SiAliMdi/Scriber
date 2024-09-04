@@ -33,7 +33,7 @@ class CategoriesModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='categories_creator')
     updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='categories_updater', null=True, blank=True)
-    deleted = models.BooleanField(default=False, blank=True, null=True, )
+    deleted = models.BooleanField(default=False )
     objects = models.Manager()
 
     def __str__(self):

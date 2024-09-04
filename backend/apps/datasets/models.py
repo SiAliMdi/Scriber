@@ -1,23 +1,5 @@
 from uuid import uuid4
 from django.db import models
-from ..categories.models import CustomIncrementalField
-
-
-""" class DatasetTagsModel(models.Model):
-    '''
-    This model is used to tag datasets
-    like: classification, extraction, etc.
-    '''
-    id = models.UUIDField(primary_key=True, default=uuid4)
-    tag = models.CharField(max_length=255, blank=False, null=False)
-    
-    objects = models.Manager()
-
-    class Meta:
-        db_table = "dataset_tags"
-        ordering = ['tag']
-        indexes = [ models.Index(fields=['tag'])]
- """
 
 class Labels(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
@@ -36,6 +18,22 @@ class Labels(models.Model):
         ordering = ['label']
         indexes = [ models.Index(fields=['label'])]
 
+
+class CustomIncrementalField(models.PositiveIntegerField):
+    def __init__(self, *args, **kwargs):
+        kwargs['editable'] = False
+        kwargs['blank'] = True
+        super().__init__(*args, **kwargs)
+
+    def pre_save(self, model_instance, add):
+        if add:
+            last_value = model_instance.__class__.objects.filter(categorie=model_instance.categorie).aggregate(models.Max('serial_number')).get('serial_number__max')
+            value = 1 if last_value is None else last_value + 1
+            setattr(model_instance, self.attname, value)
+            return value
+        else:
+            return super().pre_save(model_instance, add)
+
 class DatasetsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     serial_number = CustomIncrementalField() # models.AutoField()
@@ -50,14 +48,15 @@ class DatasetsModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='datasets_creator')
+    deleted = models.BooleanField(default=False )
     
     class Meta:
         # abstract = True
         ordering = ['serial_number']
-        indexes = [ models.Index(fields=['name', 'categorie'])]
-
-
-
+        indexes = [ models.Index(fields=['name',]), 
+                   models.Index(fields=[ 'categorie']),
+                   models.Index(fields=['deleted'])
+                   ]
 
 class DatasetsLabelsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)

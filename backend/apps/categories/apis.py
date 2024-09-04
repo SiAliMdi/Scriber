@@ -5,8 +5,8 @@ from .services import get_category, list_categories, delete_category, create_cat
 
 class Categories(views.APIView):
 
-    authentication_classes = (services.ScriberUserAuthentication,)
-    permission_classes = (permissions.IsAuthenticated,)
+    authentication_classes = [services.ScriberUserAuthentication,]
+    permission_classes = [permissions.IsAuthenticated,]
 
     def get(self, request):
         categories = list_categories()
@@ -15,7 +15,7 @@ class Categories(views.APIView):
 
 class Category(views.APIView):
     authentication_classes = (services.ScriberUserAuthentication,)
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = [permissions.IsAuthenticated,]
 
     def get(self, request, id):
         if not id:
