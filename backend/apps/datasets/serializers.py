@@ -8,7 +8,6 @@ class LabelsSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
     creator = serializers.CharField()
-    updater = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
 class DatasetsLabelsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -23,6 +22,7 @@ class DatasetsSerializer(serializers.ModelSerializer):
         model = DatasetsModel
         fields = '__all__'
     
+    labels = LabelsSerializer(many=True)
     categorie = serializers.CharField()
     creator = serializers.CharField()
     updater = serializers.CharField(required=False, allow_null=True, allow_blank=True)

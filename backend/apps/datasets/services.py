@@ -3,7 +3,7 @@ from uuid import UUID
 from ..users.services import UserDataClass
 from datetime import datetime
 from ..categories.services import CategoriesDataClass
-from .models import DatasetsModel
+from .models import DatasetsModel, Labels, DatasetsLabelsModel
 from ..users.models import ScriberUsers
 from ..categories.models import CategoriesModel
 
@@ -16,6 +16,16 @@ class LabelsDataClass:
     created_at: datetime
     updated_at: datetime
     creator: UserDataClass
+    
+    def to_dict(self, label):
+        return LabelsDataClass(id=label.id,
+                             label=label.label,
+                             description=label.description,
+                             color=label.color,
+                             created_at=label.created_at,
+                             updated_at=label.updated_at,
+                             creator=UserDataClass.to_dict(label.creator)
+                            )
 
 @dataclass
 class DatasetsDataClass:
@@ -32,11 +42,38 @@ class DatasetsDataClass:
     labels: list[LabelsDataClass]
     deleted: bool  = False
     
+    def to_dict(self, dataset):
+        return DatasetsDataClass(id=dataset.id,
+                             serial_number=dataset.serial_number,
+                             name=dataset.name,
+                             description=dataset.description,
+                             size=dataset.size,
+                             annotated_decisions=dataset.annotated_decisions,
+                             categorie=CategoriesDataClass.to_dict(dataset.categorie),
+                             created_at=dataset.created_at,
+                             updated_at=dataset.updated_at,
+                             creator=UserDataClass.to_dict(dataset.creator),
+                             deleted=dataset.deleted,
+                             labels=[LabelsDataClass(id=label.id,
+                                                     label=label.label,
+                                                     description=label.description,
+                                                     color=label.color,
+                                                     created_at=label.created_at,
+                                                     updated_at=label.updated_at,
+                                                     creator=UserDataClass.to_dict(label.creator)) for label in dataset.labels.all()]
+                             )
+    
 @dataclass
 class DatasetsLabelsDataClass:
     id: UUID
     dataset: DatasetsDataClass
     label: LabelsDataClass
+    
+    def to_dict(self, dataset_label):
+        return DatasetsLabelsDataClass(id=dataset_label.id,
+                                     dataset=DatasetsDataClass.to_dict(dataset_label.dataset),
+                                     label=LabelsDataClass.to_dict(dataset_label.label)
+                                    )
 
 
 def get_datasets(categorie_id: str) -> list[DatasetsDataClass]:
@@ -62,13 +99,14 @@ def get_datasets(categorie_id: str) -> list[DatasetsDataClass]:
                               creator=UserDataClass.to_dict(dataset.creator),
                               deleted=dataset.deleted,
                               labels=[LabelsDataClass(id=label.id,
-                                                      label=label.label,
-                                                      description=label.description,
-                                                      color=label.color,
-                                                      created_at=label.created_at,
-                                                      updated_at=label.updated_at,
-                                                      creator=UserDataClass.to_dict(label.creator)) for label in dataset.labels.all()]
+                                                    label=label.label,
+                                                    description=label.description,
+                                                    color=label.color,
+                                                    created_at=label.created_at,
+                                                    updated_at=label.updated_at,
+                                                    creator=UserDataClass.to_dict(label.creator)) for label in dataset.labels.all()]
                               ) for dataset in datasets]
+        
     return result_datasets
     
 def get_dataset(dataset_id: str) -> DatasetsDataClass:
@@ -201,3 +239,108 @@ def delete_dataset(id: str) -> bool:
     dataset.serial_number = 0
     dataset.save()
     return True
+
+def get_label(label_id: str, user) -> LabelsDataClass:
+    '''
+    Retrieve a label by its id
+    
+    Parameters:
+        label_id (str): The id of the label to retrieve
+    
+    Returns:
+        label (LabelsDataClass): The label retrieved
+    '''
+    try:
+        label = Labels.objects.get(pk=UUID(label_id).hex)
+    except Labels.DoesNotExist:
+        raise ValueError("Label not found")
+    label = label.__dict__
+    label.pop('_state')
+    label['creator'] = user
+    label.pop('creator_id')
+    label = LabelsDataClass(**label)
+    return label
+
+
+def create_label(dataset_id:str, validated_data: dict) -> LabelsDataClass:
+    try:
+        creator_user = ScriberUsers.objects.get(pk=UUID(validated_data['creator']).hex)
+    except ScriberUsers.DoesNotExist:
+        raise ValueError("Creator not found")
+    validated_data.pop('creator')
+    label = Labels(**validated_data, creator=creator_user)
+    label.save()
+    dataset = DatasetsModel.objects.get(pk=UUID(dataset_id).hex)
+    dataset.labels.add(label)
+    dataset.save()
+    label = label.__dict__
+    label.pop('_state')
+    label['creator'] = creator_user
+    label.pop('creator_id')
+    label = LabelsDataClass(**label)
+    return label
+
+def update_label(label_id: str, validated_data: dict, user) -> LabelsDataClass:
+    '''
+    Update a label by its id with the validated new data
+    
+    Parameters:
+        label_id (str): The id of the label to update
+        validated_data (dict): The new data to update the label with
+    
+    Returns:
+        label (LabelsDataClass): The updated label in LabelsDataClass format
+    '''
+    try:
+        label = Labels.objects.get(pk=UUID(label_id).hex)
+    except Labels.DoesNotExist:
+        raise ValueError("Label not found")
+    
+    for key, value in validated_data.items():
+        setattr(label, key, value)
+    label.save()
+    # setattr(label, 'creator', UserDataClass.to_dict(label.creator))
+    label = label.__dict__
+    label.pop('_state')
+    label['creator'] = user
+    label.pop('creator_id')
+    label = LabelsDataClass(**label)
+    return label
+
+def delete_label(dataset_id, label_id: str) -> bool:
+    '''
+    Delete a label by its id
+    
+    Parameters:
+        label_id (str): The id of the label to delete
+    
+    Returns:
+        True (bool): True if the label is deleted successfully
+    '''
+    try:
+        DatasetsModel.objects.get(pk=UUID(dataset_id).hex).labels.remove(Labels.objects.get(pk=UUID(label_id).hex))
+        Labels.objects.get(pk=UUID(label_id).hex).delete()
+    except DatasetsLabelsModel.DoesNotExist or Labels.DoesNotExist:
+        raise ValueError("Label or dataset not found")
+    return True
+
+def get_labels(dataset_id: str) -> list[LabelsDataClass]:
+    '''
+    Retrieve all labels related to a certain dataset
+    
+    Parameters:
+        dataset_id (str): The id of the dataset to retrieve the labels from
+    
+    Returns:
+        result_labels (list[LabelsDataClass]): The labels retrieved
+    '''
+    labels = DatasetsModel.objects.get(pk=UUID(dataset_id).hex).labels.all()
+    result_labels = [LabelsDataClass(id=label.id,
+                                     label=label.label,
+                                     description=label.description,
+                                     color=label.color,
+                                     created_at=label.created_at,
+                                     updated_at=label.updated_at,
+                                     creator=UserDataClass.to_dict(label.creator)
+                                     ) for label in labels]
+    return result_labels
