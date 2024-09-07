@@ -1,4 +1,3 @@
-from typing import Iterable
 from uuid import uuid4
 from django.db import models
 
@@ -27,19 +26,19 @@ class RawDecisionsModel(DecisionsModel):
         db_table = "raw_decisions"
         indexes = [
             models.Index(fields=['rg', ]),
-            models.Index(fields=[ 'date',]),
+            models.Index(fields=['date',]),
             models.Index(fields=['ville', ]),
             models.Index(fields=['juridiction']),
         ]
     
     def save(self, *args, **kwargs):
         self.clean()
-        if RawDecisionsModel.objects.filter(texte=self.texte).exists():
+        """ if RawDecisionsModel.objects.filter(texte=self.texte).exists():
             return
         if self.texte:
-            return super().save(*args, **kwargs)
         else:
-            return
+            return """
+        return super().save(*args, **kwargs)
 
 class DatasetsDecisionsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
