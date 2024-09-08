@@ -12,4 +12,4 @@ class DatasetsDecisionsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = DatasetsDecisionsModel
-        fields = '__all__'
+        fields = ['id', 'raw_decision']

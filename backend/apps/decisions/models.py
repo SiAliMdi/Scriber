@@ -44,10 +44,15 @@ class DatasetsDecisionsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='dataset_decision')
     raw_decision = models.ForeignKey('decisions.RawDecisionsModel', on_delete=models.DO_NOTHING, related_name='raw_decision')
+    deleted = models.BooleanField(default=False)
     # to add: list of annotations
     class Meta:
         db_table = "datasets_decisions"
         constraints = [
             models.UniqueConstraint(fields=['dataset', 'raw_decision'], name='unique_dataset_raw_decision')
+        ]
+        indexes = [
+            models.Index(fields=['dataset',]),
+            models.Index(fields=['raw_decision',]),
         ]
 
