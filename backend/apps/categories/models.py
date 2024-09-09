@@ -62,7 +62,7 @@ class CategoriesModel(models.Model):
         verbose_name = "Category"
         verbose_name_plural = "Categories"
         db_table = "categories"
-        ordering = ['-created_at']
+        ordering = ['created_at']
         indexes = [ 
                    models.Index(fields=['nomenclature',]),
                    models.Index(fields=[ 'code',]),
