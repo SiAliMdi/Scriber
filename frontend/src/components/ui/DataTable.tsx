@@ -32,7 +32,7 @@ interface DataTableProps<TData, TValue> {
 
 const DEFAULT_TABLE_COLUMN_WIDTH = 150;
 
-export function DataTable<TData, TValue>({ 
+export function DataTable<TData, TValue>({
   columns,
   data,
 }: DataTableProps<TData, TValue>) {
@@ -126,7 +126,7 @@ export function DataTable<TData, TValue>({
             ) : (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-24 text-center">
-                  No results.
+                  Pas de résultats.
                 </TableCell>
               </TableRow>
             )}
@@ -134,7 +134,7 @@ export function DataTable<TData, TValue>({
         </Table>
         <hr className="h-2" />
         <div className="flex items-center gap-2 justify-end space-x-2 py-4 mr-4">
-          Total elements: <strong>{table.getPrePaginationRowModel().rows?.length}</strong>
+          Nombre total d'éléments: <strong>{table.getPrePaginationRowModel().rows?.length}</strong>
           <Button
             // className="border rounded p-1"
             variant="outline"
@@ -174,13 +174,13 @@ export function DataTable<TData, TValue>({
           <span className="flex items-center gap-1">
             <div>Page</div>
             <strong>
-              {table.getState().pagination.pageIndex + 1}</strong> of{' '}
+              {table.getState().pagination.pageIndex + 1}</strong> de{' '}
             <strong>
               {table.getPageCount().toLocaleString()}
             </strong>
           </span>
           <span className="flex items-center gap-1">
-            | Go to page:
+            | Aller à la page:
             <input
               type="number"
               min="1"

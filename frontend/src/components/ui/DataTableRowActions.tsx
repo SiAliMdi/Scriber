@@ -35,7 +35,7 @@ const DataTableRowActions = <TData,>({ row, setUsers, onEdit, onDelete }: DataTa
           </DropdownMenuItem>
           <EditDialog {...{ row: row, onEdit: onEdit, setUsers: setUsers, } as EditDialogProps<TData>} />
           <DropdownMenuSeparator />
-          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Delete</DropdownMenuItem>
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

@@ -1,0 +1,7 @@
+from django.contrib import admin
+from .models import *
+
+class {{ app_name|title }}Admin(admin.ModelAdmin):
+    list_display = [f.name for f in {{ app_name|title }}Model._meta.fields]
+
+admin.site.register({{ app_name|title }}Model, {{ app_name|title }}Admin)

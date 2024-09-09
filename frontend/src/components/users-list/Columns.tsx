@@ -11,7 +11,7 @@ export interface UsersColumnsProps {
     onDelete: (value: User) => void;
 }
 
-const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] => [
+const getColumns = ({ setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef<User>[] => [
     {
         header: ({ column }) => {
             return (
@@ -20,7 +20,7 @@ const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Name
+                    Nom complet
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
@@ -36,7 +36,7 @@ const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Email
+                    Adresse électronique
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
@@ -56,19 +56,19 @@ const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Activated
+                    Compte activé
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
         size: 10,
         id: "activated",
-        accessorFn: row => row?.isStaff ? "Yes" : "No",
+        accessorFn: row => row?.isStaff ? "Oui" : "Non",
         meta: {
             filterVariant: 'select',
             filterOptions: [
-                { label: "Yes", value: "Yes" },
-                { label: "No", value: "No" },
+                { label: "Oui", value: "Oui" },
+                { label: "Non", value: "Non" },
             ],
         },
     },
@@ -80,7 +80,7 @@ const getColumns = ({setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDef
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Last Login
+                    Dernier Login
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )

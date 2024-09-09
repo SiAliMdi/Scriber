@@ -28,20 +28,20 @@ const Users = () => {
       if (response === 200) {
         fetchUsers(setUsers);
         toast({
-          title: "User deleted",
+          title: "Utilisateur supprimé",
           duration: 3000,
-          description: `User ${value.firstName} ${value.lastName} deleted`,
+          description: `L'utilisateur ${value.firstName} ${value.lastName} a été supprimé avec succès`,
           className: "text-green-700",
         });
-      } else {  
+      } else {
         toast({
           variant: "destructive",
           duration: 3000,
-          title: "User delete failed",
-          description: `User ${value.firstName} ${value.lastName} could not be deleted`,
+          title: "Erreur de suppression",
+          description: `L'utilisateur ${value.firstName} ${value.lastName} n'a pas pu être supprimé`,
         });
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }, [toast]);
 
 
@@ -53,12 +53,12 @@ const Users = () => {
     fetchUsers(setUsers);
   }, [])
 
-  return <>
+  return <div className="xl:w-screen">
     {<BasePage />}
-    <div className="container mx-auto py-10 max-h-screen overflow-scroll">
+    <div className="container mx-auto py-10 max-h-screen overflow-scroll xl:w-full">
       <DataTable columns={columns} data={users} />
     </div>
-  </>;
+  </div>;
 };
 
 export default Users;

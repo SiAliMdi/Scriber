@@ -1,0 +1,6 @@
+from dataclasses import dataclass
+from rest_framework import authentication, exceptions
+
+@dataclass
+class {{ app_name|title }}DataClass:
+    pass

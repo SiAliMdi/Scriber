@@ -6,7 +6,7 @@ const fetchUsers = async (setUsers: React.Dispatch<React.SetStateAction<User[]>>
   const token = sessionStorage.getItem("token");
   await axios
     .get(
-      import.meta.env.VITE_BACKEND_APP_API_URL + "users_list/",
+      import.meta.env.VITE_BACKEND_APP_API_URL + "users/users_list/",
       {
         headers: {
           Authorization: `${token}`,

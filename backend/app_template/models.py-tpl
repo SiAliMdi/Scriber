@@ -1,0 +1,4 @@
+from django.db import models
+
+class {{ app_name|title }}Model(models.Model):
+    pass

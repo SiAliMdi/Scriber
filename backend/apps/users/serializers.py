@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from django.contrib.auth import get_user_model
 from .services import UserDataClass
+from .models import ScriberUsers
 from datetime import datetime
 
 
@@ -15,7 +15,7 @@ class UserSerializer(serializers.ModelSerializer):
     last_login = serializers.DateTimeField(default=datetime.now())
     
     class Meta:
-        model = get_user_model()
+        model = ScriberUsers
         fields = ['id', 'email', 'password', 'first_name', 'last_name', 'is_active', 'is_staff', 'is_superuser', 'last_login', 'date_joined']
 
     def validate(self, data) -> UserDataClass:
@@ -32,4 +32,6 @@ class UserSerializer(serializers.ModelSerializer):
         data = super().to_internal_value(data)
         return UserDataClass(**data)
     
+    def get_id(self, data):
+        return data.id
     
