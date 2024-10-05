@@ -2,7 +2,7 @@ import { Categorie } from "@/@types/categorie";
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
-// import DataTableRowActions from "../ui/DataTableRowActions";
+import DataTableRowActions from "./DataTableRowActions";
 
 
 export interface CategoriesColumnsProps {
@@ -11,8 +11,8 @@ export interface CategoriesColumnsProps {
     onDelete: (value: Categorie) => void;
 }
 
-const getColumns = (): ColumnDef<Categorie>[] => [
-// ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps): ColumnDef<Categorie>[] => [
+const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps): ColumnDef<Categorie>[] => [
+// (): ColumnDef<Categorie>[] => [
     {
         header: ({ column }) => {
             return (
@@ -146,10 +146,10 @@ const getColumns = (): ColumnDef<Categorie>[] => [
         accessorKey : "object",
     },
     // header: "Actions",
-    /* {
+    {
         id: "actions",
         cell: ({ row }) => { return <DataTableRowActions row={row} setCategories={setCategories} onEdit={onEdit} onDelete={onDelete} /> },
         size: 10,
-    } */
+    }
 ]
 export default getColumns;

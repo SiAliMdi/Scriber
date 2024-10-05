@@ -57,6 +57,25 @@ const fetchCategories = async (setCategories: React.Dispatch<React.SetStateActio
     });
 }
 
+const createCategorie = async (categorie: Categorie) => {
+  try {
+    const response = await axios.post(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}categories/`,
+      {
+        ...categorie
+      },
+      {
+        headers: {
+          Authorization: `${sessionStorage.getItem("token")}`,
+        },
+      }
+    );
+    return response.status;
+  } catch (error) {
+    return error;
+  }
+}
+
 const editCategorie = async (categorie: Categorie) => {
   try {
     const response = await axios.patch(
@@ -93,4 +112,4 @@ const deleteCategorie = async (categorie: Categorie) => {
   }
 };
 
-export {fetchCategories, editCategorie, deleteCategorie };
+export {fetchCategories,createCategorie, editCategorie, deleteCategorie };

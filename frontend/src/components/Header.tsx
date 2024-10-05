@@ -31,7 +31,7 @@ const Header = (props: User) => {
             </div>
             <nav className="text-white flex items-center justify-between w-full" >
                 <ul className="flex space-x-4 mx-auto">
-                    <li><a href="/categories" className="hover:underline">Catégories des demandes</a></li>
+                    <li className="hover:cursor-pointer "><a onClick={() => navigate('/categories')} className="hover:underline">Catégories des demandes</a></li>
                 </ul>
                 <div className="relative ml-auto">
                     <button

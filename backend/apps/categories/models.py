@@ -10,7 +10,7 @@ class CustomIncrementalField(models.PositiveIntegerField):
 
     def pre_save(self, model_instance, add):
         if add:
-            last_value = model_instance.__class__.objects.aggregate(models.Max('serial_number')).get('serial_number__max')
+            last_value = model_instance.__class__.objects.filter(deleted=False).aggregate(models.Max('serial_number')).get('serial_number__max')
             value = 1 if last_value is None else last_value + 1
             setattr(model_instance, self.attname, value)
             return value

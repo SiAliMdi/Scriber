@@ -55,7 +55,7 @@ const Users = () => {
 
   return <div className="xl:w-screen">
     {<BasePage />}
-    <div className="container mx-auto py-10 max-h-screen overflow-scroll xl:w-full">
+    <div className="container mx-auto py-10 max-h-screen xl:w-full">
       <DataTable columns={columns} data={users} />
     </div>
   </div>;

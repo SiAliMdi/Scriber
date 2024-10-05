@@ -26,23 +26,22 @@ class CategoriesDataClass:
     id: UUID = uuid4()
 
     @classmethod
-    def to_dict(cls, category) -> "CategoriesDataClass":
-        return cls(id=category.id,
-                   serial_number=category.serial_number,
-                   nomenclature=category.nomenclature,
-                   code=category.code,
-                   description=category.description,
-                   norme=category.norme,
-                   fondement=category.fondement,
-                   condition=category.condition,
-                   object=category.object,
-                   created_at=category.created_at,
-                   updated_at=category.updated_at,
-                   creator=UserDataClass.to_dict(category.creator),
-                   updater=UserDataClass.to_dict(category.updater) if category.updater else None,
-                   deleted=category.deleted,
-                   )
-        
+    def to_dict(cls, category: CategoriesModel) -> "CategoriesDataClass":
+        return cls(id=category['id'],
+                   serial_number=category['serial_number'],
+                     nomenclature=category['nomenclature'],
+                        code=category['code'],
+                        description=category['description'],
+                        norme=category['norme'],
+                        fondement=category['fondement'],
+                        condition=category['condition'],
+                        object=category['object'],
+                        created_at=category['created_at'],
+                        updated_at=category['updated_at'],
+                        creator=UserDataClass.to_dict(category['creator']),
+                        updater=UserDataClass.to_dict(category['updater']) if category['updater'] else None,
+                        deleted=category['deleted'],
+                        )
 
 def list_categories():
     return [CategoriesDataClass.to_dict(category) for category in CategoriesModel.objects.filter(deleted=False)]

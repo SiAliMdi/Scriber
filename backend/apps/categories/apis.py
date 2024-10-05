@@ -1,7 +1,8 @@
 from rest_framework import views, permissions, response
-from .serializers import CategoriesSerializer
+from .serializers import CategoriesSerializer, CategorySerializer
 from ..users import services
-from .services import get_category, list_categories, delete_category, create_category, update_category
+from .services import get_category, delete_category
+from .models import CategoriesModel
 
 class Categories(views.APIView):
 
@@ -9,9 +10,20 @@ class Categories(views.APIView):
     permission_classes = [permissions.IsAuthenticated,]
 
     def get(self, request):
-        categories = list_categories()
+        categories = list(CategoriesModel.objects.filter(deleted=False))
         categories = CategoriesSerializer(categories, many=True).data
         return response.Response(data=categories, status=200)
+    
+    def post(self, request):
+        serializer = CategorySerializer(data=request.data)
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            validated_data['creator'] = request.user
+            serializer.create(validated_data)
+            return response.Response(data=serializer.data, status=200)
+        else:
+            return response.Response(data=serializer.errors, status=400)
+
 
 class Category(views.APIView):
     authentication_classes = (services.ScriberUserAuthentication,)
@@ -27,25 +39,21 @@ class Category(views.APIView):
             return response.Response(data={"error": str(e)}, status=400)
 
         return response.Response(data=category.data, status=200)
-
-    def post(self, request):
-        serialized_data = CategoriesSerializer(data=request.data)
-        if serialized_data.is_valid():
-            validated_data = serialized_data.validated_data
-            serialized_data.instance = create_category(validated_data)    
-            return response.Response(data=serialized_data.data, status=200)
-        else:
-            return response.Response(data=serialized_data.errors, status=400)
-
                 
     def patch(self, request, id):
-        serialized_data = CategoriesSerializer(data=request.data, partial=True)
-        if serialized_data.is_valid():
-            serialized_data = serialized_data.validated_data
-            updated_data = update_category(id, serialized_data)
-            serialized_data = CategoriesSerializer(updated_data)
-            return response.Response(data=serialized_data.data, status=200)
-        return response.Response(serialized_data.errors, status=400)
+        categorie = CategoriesModel.objects.get(id=id)
+        serializer = CategoriesSerializer(data=request.data, partial=True, instance=categorie)
+        if serializer.is_valid():
+            try:
+                validated_data = serializer.validated_data
+                serializer.update(instance=categorie, validated_data=validated_data, updater=request.user)
+                return response.Response(data=serializer.validated_data, status=200)
+            except Exception as e:
+                print("patch error",e)
+                return response.Response(data={"error": str(e)}, status=400)
+        else:
+            print(serializer.errors)
+            return response.Response(serializer.errors, status=400)
         
     def delete(self, request, id):
         if not id:

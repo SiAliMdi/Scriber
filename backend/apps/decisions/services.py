@@ -2,7 +2,6 @@ from dataclasses import dataclass
 from uuid import UUID
 from rest_framework import exceptions
 from datetime import datetime
-
 from ..users.models import ScriberUsers
 from ..users.services import UserDataClass
 from .models import RawDecisionsModel, DatasetsDecisionsModel
