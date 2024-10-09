@@ -11,51 +11,53 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Row } from "@tanstack/react-table"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
-import { Categorie } from "@/@types/categorie";
+import cloneDeep from 'lodash/cloneDeep';
+import { editCategorie } from "@/services/CategoriesServices";
 
-interface CreateDialogProps<TData> {
-    nextSerialNumber: number;
-    createCategorie : (categorie: TData) => Promise<number>;
-    createDialogOpen: boolean;
-    setCreateDialogOpen: (value: boolean) => void;
+interface LabelsDialogProps<TData> {
+    row: Row<TData>;
+    onEdit: (value: TData) => void;
     setCategories: (value: TData[]) => void;
 }
 
-const CreateDialog = <TData,>({nextSerialNumber, createCategorie, createDialogOpen, setCreateDialogOpen, setCategories }: CreateDialogProps<TData>) => {
+const LabelsDialog = <TData,>({ row, onEdit, setCategories }: LabelsDialogProps<TData>) => {
 
-    const [nomenclature, setNomenclature] = useState("");
-    const [code, setCode] = useState("");
-    const [norme, setNorme] = useState("");
-    const [fondement, setFondement] = useState("");
-    const [condition, setCondition] = useState("");
-    const [object, setObject] = useState("");
-    const [description, setDescription] = useState("");
+    const [nomenclature, setNomenclature] = useState(row.original.nomenclature);
+    const [code, setCode] = useState(row.original.code);
+    const [norme, setNorme] = useState(row.original.norme);
+    const [fondement, setFondement] = useState(row.original.fondement);
+    const [condition, setCondition] = useState(row.original.condition);
+    const [object, setObject] = useState(row.original.object);
+    const [description, setDescription] = useState(row.original.description);
     const { toast } = useToast();
 
     const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         event.preventDefault();
-        const categorie : Categorie = {
-            nomenclature,
-            code,
-            description,
-            norme,
-            fondement,
-            condition,
-            object,
-        };
-        
-        createCategorie(categorie).then((response) => {
-            if (response.status === 200) {
-                categorie.serialNumber = response.data.serial_number;
-                categorie.createdAt = response.data.created_at;
-                categorie.id = response.data.id;
-                setCategories((prev: TData[]) => [...prev, categorie]);
+        const categorie = cloneDeep(row.original);
+        categorie.nomenclature = nomenclature;
+        categorie.code = code;
+        categorie.norme = norme;
+        categorie.fondement = fondement;
+        categorie.condition = condition;
+        categorie.object = object;
+        categorie.description = description;
+        categorie.serialNumber = row.original.serialNumber;
+        // onEdit(categorie);
+       
+        editCategorie(categorie).then((response) => {
+            if (response === 200) {
+                setCategories((prev: TData[]) => {
+                    const index = prev.findIndex(u => u.id === categorie.id);
+                    prev[index] = categorie;
+                    return [...prev];
+                });
                 toast({
-                    title: "Catégorie create success",
+                    title: "Catégorie edit success",
                     duration: 5000,
-                    description: `La catégorie ${categorie.nomenclature} créée`,
+                    description: `La catégorie ${row.original.serialNumber} modifiée`,
                     // className: "bg-accent-foreground text-accent",
                     className: "text-green-700",
                 });
@@ -63,36 +65,33 @@ const CreateDialog = <TData,>({nextSerialNumber, createCategorie, createDialogOp
                 toast({
                     variant: "destructive",
                     duration: 5000,
-                    title: "Échec de la création de la catégorie",
-                    description: `La catégorie ${categorie.nomenclature} n'a pas pu être créée`,
+                    title: "Échec de la modification de la catégorie",
+                    description: `La catégorie ${row.original.serialNumber} n'a pas pu être modifiée`,
                 });
             }
-        }
-    ).catch((error) => {
-        console.error(error);
-        toast({
-            variant: "destructive",
-            duration: 5000,
-            title: "Erreur",
-            description: `${error}`,
-        });
+        }).catch(() => {});
 
-        }
-        );
+       
     }
 
     return (
         (
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} 
-         >
+        <Dialog >
             <DialogTrigger asChild>
-                {/* <span className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-[#f5f5f5] hover:cursor-pointer">
+                <span className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50 hover:bg-[#f5f5f5] hover:cursor-pointer">
                     Modifier
-                </span> */}
+                </span>
             </DialogTrigger>
             <DialogContent className="w-11/12 max-w-none mx-0">
                 <DialogHeader>
-                    <DialogTitle>Créer une nouvelle catégorie de demande </DialogTitle>
+                    <DialogTitle>Modifier la catégorie {row.original.serialNumber} </DialogTitle>
+                    {/* <DialogDescription>
+                    Activer/désactiver l'utilisateur ici en basculant le switch.
+                        <br />
+                        Les utilisateurs désactivés ne pourront plus se connecter.
+                        <br />
+                        Cliquez sur enregistrer lorsque vous avez terminé.
+                    </DialogDescription> */}
                 </DialogHeader>
                 <div className="grid gap-1 py-1 w-full mx-0 px-0">
                     <div className="grid grid-cols-10  gap-1 w-full mx-0 px-0">
@@ -166,7 +165,7 @@ const CreateDialog = <TData,>({nextSerialNumber, createCategorie, createDialogOp
                     
                 </div>
                 <DialogFooter>
-                    <Button type="submit" onClick={handleSave}>Enregistrer</Button>
+                    <Button type="submit" onClick={handleSave}>Enregistrer les modifications</Button>
                 </DialogFooter>
             </DialogContent>
         </Dialog>
@@ -174,5 +173,5 @@ const CreateDialog = <TData,>({nextSerialNumber, createCategorie, createDialogOp
     )
 }
 
-export default CreateDialog;
-export type { CreateDialogProps };
+export default LabelsDialog;
+export type { LabelsDialogProps };

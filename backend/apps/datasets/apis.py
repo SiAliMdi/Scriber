@@ -1,7 +1,14 @@
+from uuid import UUID
 from rest_framework import views, permissions, response, request
+
+from ..categories.models import CategoriesModel
+
+from .models import DatasetsModel
 from ..users import services as users_services
 from . import services as datasets_services
 from .serializers import  DatasetsSerializer, LabelsSerializer
+from ..categories.serializers import CategoriesSerializer
+from ..users.serializers import UserSerializer
 
 class Datasets(views.APIView):
     '''
@@ -28,7 +35,8 @@ class Datasets(views.APIView):
         if not request.user.is_authenticated:
             return response.Response(data={"error": "Unauthorized"}, status=401)
         else:
-            datasets = datasets_services.get_datasets(category_id)
+            # datasets = datasets_services.get_datasets(category_id)
+            datasets = DatasetsModel.objects.filter(categorie=UUID(category_id).hex, deleted=False)
             datasets = DatasetsSerializer(datasets, many=True).data
             return response.Response(datasets, status=200)
 
@@ -76,28 +84,38 @@ class Dataset(views.APIView):
         serialized_data = DatasetsSerializer(data=request.data)
         if serialized_data.is_valid():
             validated_data = serialized_data.validated_data
-            serialized_data.instance = datasets_services.create_dataset(validated_data)
-            return response.Response(serialized_data.data, status=200)
+            validated_data['creator'] = request.user                
+            validated_data['categorie'] = CategoriesModel.objects.get(id=validated_data['categorie'])
+            dataset = DatasetsModel.objects.create(**validated_data)
+            dataset = DatasetsSerializer(dataset)
+            return response.Response(dataset.data, status=200)
         else:
             return response.Response(serialized_data.errors, status=400)
     
     def patch(self, request: request.Request, dataset_id: str) -> response.Response:
         if not dataset_id:
             return response.Response(data={"error": "Id is required"}, status=400)
-        
-        serialized_data = DatasetsSerializer(data=request.data, partial=True)
-        if serialized_data.is_valid():
-            serialized_data = serialized_data.validated_data
-            updated_data = datasets_services.update_dataset(dataset_id, serialized_data)
-            serialized_data = DatasetsSerializer(updated_data)
-            return response.Response(serialized_data.data, status=200)
+        dataset = DatasetsModel.objects.get(id=dataset_id)
+        serializer = DatasetsSerializer(data=request.data, partial=True, instance=dataset)
+        if serializer.is_valid():
+            serialized_data = serializer.validated_data
+            serializer.update(instance=DatasetsModel.objects.get(id=dataset_id), validated_data=serialized_data, updater=request.user)
+            serialized_data['categorie'] = CategoriesSerializer(serialized_data['categorie']).data
+            serialized_data['creator'] = UserSerializer(serialized_data['creator']).data
+            return response.Response(data=serialized_data, status=200)
         return response.Response(serialized_data.errors, status=400)
     
     def delete(self, request: request.Request, dataset_id: str) -> response.Response:
         if not dataset_id:
             return response.Response(data={"error": "Id is required"}, status=400)
         try:
-            datasets_services.delete_dataset(dataset_id)
+            dataset = DatasetsModel.objects.get(id=dataset_id)
+            dataset.deleted = True
+            for ds in DatasetsModel.objects.filter(deleted=False, serial_number__gt=dataset.serial_number):
+                ds.serial_number -= 1
+                ds.save()
+            dataset.serial_number = 0
+            dataset.save()
         except Exception as e:
             return response.Response(data={"error": str(e)}, status=400)
         return response.Response(status=200, data={"message": "Dataset deleted successfully"})

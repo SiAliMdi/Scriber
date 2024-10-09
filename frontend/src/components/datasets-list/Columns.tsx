@@ -1,18 +1,17 @@
-import { Categorie } from "@/@types/categorie";
+import { Dataset } from "@/@types/dataset";
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import DataTableRowActions from "./DataTableRowActions";
 
 
-export interface CategoriesColumnsProps {
-    setCategories: (value: Categorie[]) => void;
-    onEdit: (value: Categorie) => void;
-    onDelete: (value: Categorie) => void;
+export interface DatasetsColumnsProps {
+    setDatasets: (value: Dataset[]) => void;
+    onEdit: (value: Dataset) => void;
+    onDelete: (value: Dataset) => void;
 }
 
-const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps): ColumnDef<Categorie>[] => [
-// (): ColumnDef<Categorie>[] => [
+const getColumns =  ({ setDatasets, onEdit, onDelete }: DatasetsColumnsProps): ColumnDef<Dataset>[] => [
     {
         header: ({ column }) => {
             return (
@@ -37,13 +36,13 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Nomenclature
+                    Nom
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
-        id: "nomenclature",
-        accessorKey: "nomenclature",
+        id: "name",
+        accessorFn: row => row.name.length > 11 ? row.name.substring(0, 11) + "..." : row.name,
     },
     {
         header: ({ column }) => {
@@ -53,14 +52,14 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Code
+                    Description
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
         size: 10,
-        id: "code",
-        accessorFn: row => row.code.length > 10 ? row.code.slice(0, 10) + "..." : row.code,
+        id: "description",
+        accessorFn: row => row.description.length > 11 ? row.description.substring(0, 11) + "..." : row.description,
     },
     {
         header: ({ column }) => {
@@ -70,13 +69,13 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Norme
+                    Taille
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
-        id: "norme",
-        accessorFn: row => row.norme.length > 10 ? row.norme.slice(0, 10) + "..." : row.norme,
+        id: "size",
+        accessorKey : "size",
     },
     {
         header: ({ column }) => {
@@ -86,28 +85,13 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Fondement
+                    Etat de l'annotation
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
-        id: "fondement",
-        accessorFn: row => row.fondement.length > 10 ? row.fondement.slice(0, 10) + "..." : row.fondement,
-    },
-    {
-        header: ({ column }) => {
-            return (
-                <Button
-                    className="text-left font-bold"
-                    variant="ghost"
-                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
-                    Condition
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                </Button>
-            )
-        },
-        id: "condition",
-        accessorFn: row => row.condition?.length > 10 ? row.condition.slice(0, 10) + "..." : row.condition,
+        id: "annotatedDecisions",
+        accessorKey : "annotatedDecisions",
     },
     {
         header: ({ column }) => {
@@ -117,19 +101,23 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Objet
+                    Date de création
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
         },
-        id: "object",
-        accessorFn: row => row.object?.length > 10 ? row.object.slice(0, 10) + "..." : row.object,
-        // accessorKey : "object",
+        id: "createdAt",
+        accessorFn: row => row?.createdAt ? new Date(row.createdAt).toLocaleString() : "Never",
+        sortingFn: (rowA, rowB, columnId) => {
+            const dateA = new Date(rowA.original[columnId]).getTime();
+            const dateB = new Date(rowB.original[columnId]).getTime();
+            return dateA - dateB;
+        },
+
     },
-    // header: "Actions",
     {
         id: "actions",
-        cell: ({ row }) => { return <DataTableRowActions row={row} setCategories={setCategories} onEdit={onEdit} onDelete={onDelete} /> },
+        cell: ({ row }) => { return <DataTableRowActions row={row} setDatasets={setDatasets} onEdit={onEdit} onDelete={onDelete} /> },
         size: 10,
     }
 ]
