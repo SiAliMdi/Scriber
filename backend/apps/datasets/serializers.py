@@ -7,7 +7,17 @@ class LabelsSerializer(serializers.ModelSerializer):
         fields = '__all__'
         
     creator = serializers.CharField()
-
+    updater = serializers.CharField(required=False, allow_null=True, allow_blank=True)
+    def to_internal_value(self, data):
+        return data
+    
+    def update(self, instance, validated_data, updater=None):
+        if updater:
+            instance.updater = updater
+        validated_data['creator'] = instance.creator
+        instance = super().update(instance, validated_data)
+        return instance
+    
 class DatasetsLabelsSerializer(serializers.ModelSerializer):
     class Meta:
         model = DatasetsLabelsModel

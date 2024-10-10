@@ -10,6 +10,7 @@ import {
 } from '../ui/dropdown-menu';
 import EditDialog, { EditDialogProps } from './EditDialog';
 import ReadDialog, { ReadDialogProps } from './DatasetDialog';
+import LabelsDialog, { LabelsDialogProps } from '../categories-list/LabelsDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -36,7 +37,7 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
           <EditDialog {...{ row, onEdit, setDatasets, } as EditDialogProps<TData>}  />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
-          
+          <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
