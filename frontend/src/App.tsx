@@ -6,6 +6,7 @@ import './index.css'
 import RegisterPage from './pages/RegisterPage'
 import React from 'react'
 import CategoriesPage from './pages/CategoriesPage'
+import DatasetsPage from './pages/DatasetsPage'
 // import '@fontsource/roboto/300.css';
 // import '@fontsource/roboto/400.css';
 // import '@fontsource/roboto/500.css';
@@ -25,6 +26,7 @@ const  App: React.FC = () => {
                     <Route path="/login" element={<LoginPage/>}/>
                     <Route path='/register' element={<RegisterPage/>}/>
                     <Route path='/categories' element={<CategoriesPage/>}/>
+                    <Route path='/datasets/:id' element={<DatasetsPage/>}/>
                 </Routes>
             </Router>
             

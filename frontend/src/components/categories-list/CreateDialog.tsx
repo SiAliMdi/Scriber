@@ -47,8 +47,10 @@ const CreateDialog = <TData,>({nextSerialNumber, createCategorie, createDialogOp
         };
         
         createCategorie(categorie).then((response) => {
-            if (response === 200) {
-                categorie.serialNumber = nextSerialNumber;
+            if (response.status === 200) {
+                categorie.serialNumber = response.data.serial_number;
+                categorie.createdAt = response.data.created_at;
+                categorie.id = response.data.id;
                 setCategories((prev: TData[]) => [...prev, categorie]);
                 toast({
                     title: "Catégorie create success",

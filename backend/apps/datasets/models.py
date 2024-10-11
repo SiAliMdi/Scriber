@@ -4,14 +4,14 @@ from django.db import models
 class Labels(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     label = models.CharField(max_length=255, blank=False, null=False)
-    description = models.TextField(blank=True, null=True, default="", max_length=4096)
+    # description = models.TextField(blank=True, null=True, default="", max_length=4096)
     color = models.CharField(max_length=7, blank=True, null=True, default="#f0f0f0")
     # tag = models.ForeignKey('datasets.DatasetTagsModel', on_delete=models.DO_NOTHING, related_name='label_tag', blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='labels_creator')
-
+    deleted = models.BooleanField(default=False )
     objects = models.Manager()
     class Meta:
         db_table = "labels"
@@ -27,7 +27,7 @@ class CustomIncrementalField(models.PositiveIntegerField):
 
     def pre_save(self, model_instance, add):
         if add:
-            last_value = model_instance.__class__.objects.filter(categorie=model_instance.categorie).aggregate(models.Max('serial_number')).get('serial_number__max')
+            last_value = model_instance.__class__.objects.filter(categorie=model_instance.categorie).filter(deleted=False).aggregate(models.Max('serial_number')).get('serial_number__max')
             value = 1 if last_value is None else last_value + 1
             setattr(model_instance, self.attname, value)
             return value

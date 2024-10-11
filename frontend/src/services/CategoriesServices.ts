@@ -70,7 +70,7 @@ const createCategorie = async (categorie: Categorie) => {
         },
       }
     );
-    return response.status;
+    return response;
   } catch (error) {
     return error;
   }
