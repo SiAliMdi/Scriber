@@ -35,14 +35,30 @@ const DataTableRowActions = <TData,>({ row, setCategories, onEdit, onDelete }: D
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
           <ReadDialog {...{ row } as ReadDialogProps<TData>} />
-          <EditDialog {...{ row, onEdit, setCategories, } as EditDialogProps<TData>}  />
+          <EditDialog {...{ row, onEdit, setCategories, } as EditDialogProps<TData>} />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
-          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/datasets/${row.original.id}`, 
-          {state:{
-            categoryId: row.original.id, 
-            categorySerialNumber: row.original.serialNumber
-          }})}>Datasets</DropdownMenuItem>
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/datasets/${row.original.id}`,
+            {
+              state: {
+                categoryId: row.original.id,
+                categorySerialNumber: row.original.serialNumber
+              }
+            })}>Datasets</DropdownMenuItem>
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/models/${row.original.id}`,
+            {
+              state: {
+                categoryId: row.original.id,
+                categorySerialNumber: row.original.serialNumber
+              }
+            })}>Models</DropdownMenuItem>
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/prompts/${row.original.id}`,
+            {
+              state: {
+                categoryId: row.original.id,
+                categorySerialNumber: row.original.serialNumber
+              }
+            })}>Prompts</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

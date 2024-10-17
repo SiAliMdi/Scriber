@@ -43,7 +43,7 @@ class BinaryAnnotationsModel(AnnotationsModel):
     start_offset = None
     end_offset = None
     text = None
-    model_annotator = models.ForeignKey('ai_models.BinaryClassificationModelsModel', on_delete=models.DO_NOTHING, related_name='model_annotator', blank=True, null=True)
+    model_annotator = models.ForeignKey('ai_models.Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='model_annotator', blank=True, null=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_creator', blank=False, null=False)
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='binary_annotations_decision', blank=False, null=False)
     human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_human_annotator', blank=True, null=True)
@@ -86,7 +86,7 @@ class ExtractionAnnotationsModel(models.Model):
     text_annotations = models.ManyToManyField('annotations.TextAnnotationsModel', related_name='extraction_annotations', blank=True,  through='annotations.ExtractionTextAnnotationsModel')
     binary_annotations = models.ManyToManyField('annotations.BinaryAnnotationsModel', related_name='extraction_annotations', blank=True,  through='annotations.ExtractionBinaryAnnotationsModel')
     
-    model_annotator = models.ForeignKey('ai_models.ExtractionModelsModel', on_delete=models.DO_NOTHING, related_name='extraction_model_annotator', blank=True, null=True)
+    model_annotator = models.ForeignKey('ai_models.Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='extraction_model_annotator', blank=True, null=True)
 
     state = models.CharField(max_length=255, blank=True, null=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_creator', blank=False, null=False)
@@ -118,7 +118,7 @@ class ExtractionBinaryAnnotationsModel(models.Model):
     # state = models.CharField(max_length=255, blank=True, null=True)
     
     human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_human_annotator', blank=True, null=True)
-    model_annotator = models.ForeignKey('ai_models.ExtractionModelsModel', on_delete=models.DO_NOTHING, related_name='extraction_binary_model_annotator', blank=True, null=True)
+    model_annotator = models.ForeignKey('ai_models.Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='extraction_binary_model_annotator', blank=True, null=True)
 
     class Meta:
         db_table = "extraction_binary_annotations"

@@ -21,9 +21,6 @@ class Categories(views.APIView):
             validated_data['creator'] = request.user
             category = CategoriesModel.objects.create(**validated_data)
             category = CategoriesSerializer(category)
-            # category = serializer.create(validated_data)
-            print("category", category)
-            # return response.Response(data=serializer.data, status=200)
             return response.Response(data=category.data, status=200)
         else:
             return response.Response(data=serializer.errors, status=400)

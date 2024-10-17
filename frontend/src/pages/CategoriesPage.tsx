@@ -51,7 +51,7 @@ const CategoriesPage = () => {
 
     useMemo(() =>
         setColumns(getColumns({ setCategories: setCategories, onEdit: onEdit, onDelete: onDelete })),
-        [ onEdit, onDelete]);
+        [onEdit, onDelete]);
     //setColumns(getColumns()),
     // []);
 
@@ -62,15 +62,16 @@ const CategoriesPage = () => {
         {<BasePage />}
         <div className="container mx-auto py-2 max-h-screen xl:w-full">
             {/* Aligner le bouton à droite  */}
+            <h1 className="text-2xl font-bold float-left mx-1 my-2">Catégories de demandes</h1>
             <Button variant="secondary" className="bg-blue-500 text-white float-right mx-1 my-2" onClick={() => {
                 setNextSerialNumber(categories.length + 1);
                 setCreateDialogOpen(true)
-                }}>Ajouter une catégorie
+            }}>Ajouter une catégorie
 
             </Button>
             {
                 createDialogOpen && <CreateDialog nextSerialNumber={nextSerialNumber} createCategorie={createCategorie} setCategories={setCategories} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
-                 />
+                />
             }
 
             <DataTable columns={columns} data={categories} />
