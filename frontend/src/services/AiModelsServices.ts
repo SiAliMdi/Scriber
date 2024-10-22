@@ -42,7 +42,6 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
 
 const createAiModel = async (dataset: AiModel) => {
   try {
-    console.log('sending new model ====');
     const response = await axios.post(
       `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/new/`,
       {
@@ -54,7 +53,6 @@ const createAiModel = async (dataset: AiModel) => {
         },
       }
     );
-    console.log('new model sent ====');
     return response;
   } catch (error) {
     return error;

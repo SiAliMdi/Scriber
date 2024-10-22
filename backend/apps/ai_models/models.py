@@ -45,6 +45,7 @@ class Ai_ModelsModel(models.Model):
 
 class PromptsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
+    serial_number = CustomIncrementalField()
     prompt = models.TextField(blank=False, null=False, default="", max_length=32_768)
     category = models.ForeignKey('categories.CategoriesModel', on_delete=models.DO_NOTHING, related_name='prompt_category', blank=True, null=True)
     
@@ -53,12 +54,12 @@ class PromptsModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='prompts_creator')
-
+    deleted = models.BooleanField(default=False)
     objects = models.Manager()
 
     class Meta:
         db_table = "prompts"
-        ordering = ['prompt']
+        ordering = ['serial_number']
         indexes = [ models.Index(fields=['prompt'])]
 
 class AiModelTrainingsModel(models.Model):
