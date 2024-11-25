@@ -29,27 +29,27 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'corsheaders',
-    'apps.users',
-    'apps.ai_models',
-    'apps.annotations',
-    'apps.categories',
-    'apps.datasets',
-    'apps.decisions',
+    'users',
+    'ai_models',
+    'annotations',
+    'categories',
+    'datasets',
+    'decisions',
 ]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'apps.users.services.ScriberUserAuthentication',
+        'users.services.ScriberUserAuthentication',
     ),
 }
 
 DEFAULT_AUTHENTICATION_CLASSES = ( 
-    'apps.users.services.ScriberUserAuthentication',
+    'users.services.ScriberUserAuthentication',
 )
 
 AUTHENTICATION_BACKENDS = [
     #  'django.contrib.auth.backends.ModelBackend',
-    'apps.users.services.ScriberUserAuthentication',
+    'users.services.ScriberUserAuthentication',
 ]
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
@@ -161,3 +161,20 @@ class LogMiddleware:
         response = self.get_response(request)
         print(f"Response Status Code: {response.status_code}")
         return response
+
+# CELERY
+CELERY_BROKER_URL = getenv('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = getenv('CELERY_RESULT_BACKEND')
+
+# JUDILIBRE API
+JUDILIBRE_OAUTH_URL = getenv('JUDILIBRE_OAUTH_URL')
+JUDILIBRE_CLIENT_ID = getenv('JUDILIBRE_CLIENT_ID')
+JUDILIBRE_CLIENT_SECRET = getenv('JUDILIBRE_CLIENT_SECRET')
+JUDILIBRE_SCOPE = getenv('JUDILIBRE_SCOPE')
+JUDILIBRE_URL = getenv('JUDILIBRE_URL')
+
+# TYPESENSE API
+TYPESENSE_HOST = getenv('TYPESENSE_HOST')
+TYPESENSE_PORT = getenv('TYPESENSE_PORT')
+TYPESENSE_API_KEY = getenv('TYPESENSE_API_KEY')
+TYPESENSE_COLLECTION_NAME = getenv('TYPESENSE_COLLECTION_NAME')
