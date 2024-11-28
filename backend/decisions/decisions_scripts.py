@@ -20,10 +20,10 @@ def export_ca_decisions_daily_task():
     export_ca_decisions(start_date, end_date)
 
 def main():
-    # export_ca_decisions_daily_task()
-    batch_size = 1000
+    export_ca_decisions_daily_task()
     typesense_client = connect_to_typesense()
-    insert_decisions_typesense(typesense_client, batch_size)
+    """ batch_size = 1000
+    insert_decisions_typesense(typesense_client, batch_size) """
     print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
     # drop all collections
     """ for collection in typesense_client.collections.retrieve():

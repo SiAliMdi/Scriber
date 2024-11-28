@@ -9,6 +9,7 @@ import CategoriesPage from './pages/CategoriesPage'
 import DatasetsPage from './pages/DatasetsPage'
 import ModelsPage from './pages/ModelsPage'
 import PromptsPage from './pages/PromptsPage'
+import SearchPage from './pages/SearchPage'
 // import '@fontsource/roboto/300.css';
 // import '@fontsource/roboto/400.css';
 // import '@fontsource/roboto/500.css';
@@ -22,7 +23,7 @@ const  App: React.FC = () => {
             <Router>
                 <Routes>
                 
-                    <Route path="/" element={<BasePage/>} /> 
+                    <Route path="/" element={<SearchPage/>} /> 
                     <Route path='/users' element={<Users/>}/>
                 
                     <Route path="/login" element={<LoginPage/>}/>

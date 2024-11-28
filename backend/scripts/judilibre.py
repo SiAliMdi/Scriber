@@ -169,6 +169,7 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         print(f"Processed batch {export_params['batch']} from {export_params['date_start']} to {export_params['date_end']}")
         print(f"RawDecisions size: {RawDecisionsModel.objects.count()}, total results: {decisions_batch['total']}")
         print(f"Next batch: {decisions_batch['next_batch']}")
+        print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
 
     # Initial setup
     access_token = authenticate_judilibre()

@@ -20,7 +20,7 @@ def create_app():
     app.conf.beat_schedule = {
         'export-ca-decisions-daily-task': {
             'task': 'decisions.tasks.export_ca_decisions_daily_task',
-            'schedule': crontab(hour=16, minute=30),
+            'schedule': crontab(hour=3, minute=15),
             # 'args': (),
         },
     }
