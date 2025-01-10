@@ -86,3 +86,9 @@ class DatasetDecisionsDetailView(views.APIView):
         services.delete_decision(decision_id)
         return response.Response({"message": "decision deleted successfully"}, status=204)
     
+class VillesListView(views.APIView):
+    def get(self, request):
+        juridictions = request.GET.getlist('juridictions[]') 
+        villes = RawDecisionsModel.objects.filter(j_juridiction__in=juridictions).values('j_ville').distinct().order_by('j_ville').values_list('j_ville', flat=True)
+        villes = list(villes)
+        return response.Response(data=villes, status=200)
