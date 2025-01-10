@@ -39,7 +39,7 @@ def connect_to_typesense(connection_timeout_seconds : int = 600):
 
 def get_typesense_collection(client: typesense.Client):
     # delete data collection if it exists
-    # client.collections[settings.TYPESENSE_COLLECTION_NAME].delete()
+    client.collections[settings.TYPESENSE_COLLECTION_NAME].delete()
     try:
         data_collection = client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()
         print("collection found")
@@ -51,6 +51,7 @@ def get_typesense_collection(client: typesense.Client):
                 {"name": "id", "type": "string", "facet": False, "index": True}, # id of document in database
                 # {"name": "j_id", "type": "string", "index": False},
                 {"name": "j_rg", "type": "string", "sort": True},
+                {"name": "j_juridiction", "type": "string", "facet": True, "sort": True},
                 {"name": "j_date", "type": "int64", "facet": True, "sort": True}, # as advised by https://threads.typesense.org/2J32f38 , the only way to store dates for now
                 {"name": "j_ville", "type": "string", "facet": True, "sort": True},
                 {"name": "j_chambre", "type": "string", "facet": True, "sort": True, "locale": "fr"},
@@ -77,6 +78,7 @@ def insert_decisions_typesense(typesense_client, batch_size: int= 100):
             decisions_batch.append({
                 "id": str(decision.id),
                 "j_rg": decision.j_rg,
+                "j_juridiction": decision.j_juridiction,
                 "j_date": int(datetime.combine(decision.j_date, datetime.min.time()).timestamp()),
                 "j_ville": decision.j_ville,
                 "j_chambre": decision.j_chambre,
@@ -166,6 +168,7 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         
         decisions_batch = get_query_response(access_token, export_url, export_params)
         insert_decisions_batch(decisions_batch, batch_size, typesense_client)
+        
         print(f"Processed batch {export_params['batch']} from {export_params['date_start']} to {export_params['date_end']}")
         print(f"RawDecisions size: {RawDecisionsModel.objects.count()}, total results: {decisions_batch['total']}")
         print(f"Next batch: {decisions_batch['next_batch']}")
