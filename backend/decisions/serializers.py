@@ -83,4 +83,21 @@ class DatasetsDecisionsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = DatasetsDecisionsModel
-        fields = ['id', 'raw_decision']
+        fields = '__all__'
+
+    def to_internal_value(self, data):
+        new_data = {}
+        try:
+            new_data['raw_decision'] = data['raw_decision']
+        except Exception:
+            new_data['raw_decision'] = ''
+        try:
+            new_data['dataset'] = data['dataset']
+        except Exception:
+            new_data['dataset'] = ''
+        return new_data
+    
+    def create(self, validated_data):
+        print("creating")
+        return DatasetsDecisionsModel(**validated_data)
+    

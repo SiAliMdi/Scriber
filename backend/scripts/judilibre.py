@@ -11,6 +11,7 @@ from pandas import date_range
 from time import time
 from django.core.paginator import Paginator
 from typing import List
+from django.db.models import Count
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
@@ -19,7 +20,7 @@ django.setup()
 
 from decisions.models import RawDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
-from .cleaner_utils import clean_text
+from cleaner_utils import clean_text
 from django.conf import settings
 
 from datetime import datetime, timedelta
@@ -148,6 +149,16 @@ def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_cli
         })
     insert_decisions_batch_typesense(typesense_client, typesense_decisions, batch_size)
 
+def delete_unmatched_decisions(typesense_client: typesense.Client):
+    raw_collection_decisions = typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.export( {'include_fields' : 'id'} )
+    raw_ids = []
+    for decision in raw_collection_decisions.strip().splitlines():
+        raw_ids.append(loads(decision)['id'])
+    raw_decisions = RawDecisionsModel.objects.all()
+    for decision in raw_decisions:
+        if not decision.id in raw_ids:
+            typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents[decision.id].delete()
+
 def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     def refresh_token_if_needed():
         nonlocal access_token, start_token_time
@@ -212,6 +223,8 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         export_params["batch"] = 0
         refresh_token_if_needed()
 
+    # Delete unmatched decisions from Typesense
+    delete_unmatched_decisions(typesense_client)
     print("All batches completed.")
     pbar.close()
 
@@ -281,9 +294,27 @@ def main_2():
 def main_3():
     typesense_client = connect_to_typesense()
     print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
-    batch_size = 1000
-    insert_decisions_typesense(typesense_client, batch_size)
+    # batch_size = 1000
+    # insert_decisions_typesense(typesense_client, batch_size)
+    # count duplicate decisions by j_texte field in my collection
+    # print(RawDecisionsModel.objects.values('id').annotate(count=Count('texte_net')).filter(count__gt=1))
+    all_decisions = typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.export( {'include_fields' : 'id'} )
+    # loop over all decisions and search for un existing decisions in the database
+    decisions = []
+    for decision in all_decisions.strip().splitlines():
+        decisions.append(loads(decision))
+    print(f"{len(decisions) = }")
+    print(f"{len(set([decision['id'] for decision in decisions])) = }")
+    print(f"{len(RawDecisionsModel.objects.all()) = }")
+    for decision in decisions:
+        if not RawDecisionsModel.objects.filter(id=decision['id']).exists():
+            typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents[decision['id']].delete()
     print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
+    
+          
+        
+    
+    
     
 if __name__ == "__main__":
     main_3()

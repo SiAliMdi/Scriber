@@ -13,5 +13,7 @@ urlpatterns = [
     path("dataset/<str:dataset_id>/all/", apis.DatasetDecisionsListView.as_view(), name="all_raw_decisions"),
     # crud operations on a decision of a dataset
     path("dataset/<str:decision_id>/", apis.DatasetDecisionsDetailView.as_view(), name="all_raw_decisions"),
+    ######## USED IN THE FRONTEND ########
     path("villes/", apis.VillesListView.as_view(), name="get_villes"),
+    path("associer/", apis.Associer.as_view(), name="get_chambres"),
 ]

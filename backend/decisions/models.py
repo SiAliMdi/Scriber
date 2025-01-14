@@ -49,6 +49,7 @@ class DatasetsDecisionsModel(models.Model):
     dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='dataset_decision')
     raw_decision = models.ForeignKey('decisions.RawDecisionsModel', on_delete=models.DO_NOTHING, related_name='raw_decision')
     deleted = models.BooleanField(default=False)
+    add_date = models.DateTimeField(auto_now_add=True)
     # to add: list of annotations
     class Meta:
         db_table = "datasets_decisions"
@@ -59,4 +60,4 @@ class DatasetsDecisionsModel(models.Model):
             models.Index(fields=['dataset',]),
             models.Index(fields=['raw_decision',]),
         ]
-
+        ordering = ['add_date']

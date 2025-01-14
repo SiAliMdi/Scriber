@@ -1,4 +1,6 @@
 from rest_framework import views, permissions, response, generics
+from django.shortcuts import get_object_or_404
+from datasets.models import DatasetsModel
 from users import services as users_services
 from . import services
 from .models import RawDecisionsModel, DatasetsDecisionsModel
@@ -92,3 +94,19 @@ class VillesListView(views.APIView):
         villes = RawDecisionsModel.objects.filter(j_juridiction__in=juridictions).values('j_ville').distinct().order_by('j_ville').values_list('j_ville', flat=True)
         villes = list(villes)
         return response.Response(data=villes, status=200)
+
+
+class Associer(views.APIView):
+    def post(self, request):
+        dataset_id = request.data.get('dataset_id')
+        raw_decisions = request.data.get('raw_decisions')
+        dataset = get_object_or_404(DatasetsModel, pk=UUID(dataset_id).hex)
+        validated_data = []
+        for raw_decision in raw_decisions:
+            raw_decision = get_object_or_404(RawDecisionsModel, pk=UUID(raw_decision).hex)
+            serializer = DatasetsDecisionsSerializer(data={"dataset": dataset, "raw_decision": raw_decision})
+            if serializer.is_valid():
+                validated_decision = serializer.validated_data
+                validated_data.append(serializer.create(validated_decision))
+        DatasetsDecisionsModel.objects.bulk_create(validated_data)
+        return response.Response(data={"message": "Decision associated successfully"}, status=200)

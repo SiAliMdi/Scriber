@@ -8,17 +8,17 @@ import {
   // DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
+import { useToast } from "@/components/ui/use-toast";
 // import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { fetchCategories, fetchVilles, search, logCollection } from "@/services/SearchServices"
+import { fetchCategories, fetchVilles, search, logCollection, associerDecisions } from "@/services/SearchServices"
 import { Categorie } from "@/@types/categorie";
 import { Dataset } from "@/@types/dataset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchParameters, Keyword, SearchResult, Decision } from "@/@types/search"
-import { set } from "lodash";
+import { forEach } from "lodash";
 
 
 const SearchPage = () => {
@@ -71,15 +71,11 @@ const SearchPage = () => {
   const [pageSize, setPageSize] = useState<number>(250);
   const [keywordsValue, setKeywordsValue] = useState<string[]>([]);
 
+  const { toast } = useToast();
   useEffect(() => {
     setKeywordsValue(keywords.map((keyword) => keyword.value));
   }, [keywords]);
 
-  useEffect(() => {
-    // setSearchResult(searchResult);
-    // setSearchParameters({...searchParameters, per_page: pageSize});
-    console.log("searchResult: ", searchResult);
-  }, [pageSize]);
 
   useEffect(() => {
     fetchCategories(setCategoriesDatasets);
@@ -91,14 +87,6 @@ const SearchPage = () => {
   }, [selectedJuridictions, searchParameters,
     // pageSize
   ]);
-
-  /* const handleSearch = () => {
-    setIsSearching(true);
-    
-    setTimeout(() => {
-      setIsSearching(false);
-    }, 2000);
-  }; */
 
   // Handle keywords
   const addKeyword = () => {
@@ -251,6 +239,33 @@ const SearchPage = () => {
     }
   }
 
+  function handleAssocier(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+    console.log("Associer les décisions: ", selectedDecisions);
+    for (let index = 0; index < selectedDatasets.length; index++) {
+      const dataset = selectedDatasets[index];
+
+      associerDecisions(dataset, selectedDecisions).then(data => {
+        console.log("Associer les décisions: ", data);
+        toast({
+          title: "Décisions associées",
+          duration: 3000,
+          description: `Les décisions ont été associées avec succès`,
+          className: "text-green-700",
+        });
+      
+      }
+      ).catch((error) => {
+        console.error("Error while associating decisions: ", error);
+        toast({
+          variant: "destructive",
+          duration: 3000,
+          title: "Erreur d'association",
+          description: `Les décisions n'ont pas pu être associées avec le dataset ${dataset}`,
+        });
+      }
+      );
+    }
+  }
   return (
     <div className="flex xl:w-screen h-screen flex-col">
       <BasePage />
@@ -612,17 +627,17 @@ const SearchPage = () => {
           <div className="flex justify-between items-center mb-3">
             <div className="flex items-center">
 
-            <Checkbox
-              id="select-all"
-              checked={selectAll}
-              onChange={toggleSelectAll}
-              onClick={toggleSelectAll}
-              className="mr-2 cursor-pointer"
-            />
-            <Label htmlFor="select-all" className="cursor-pointer">Sélectionner toutes les décisions</Label>
+              <Checkbox
+                id="select-all"
+                checked={selectAll}
+                onChange={toggleSelectAll}
+                onClick={toggleSelectAll}
+                className="mr-2 cursor-pointer"
+              />
+              <Label htmlFor="select-all" className="cursor-pointer">Sélectionner toutes les décisions</Label>
             </div>
             <button
-              onClick={handleSearch}
+              onClick={handleAssocier}
               className="px-2 py-2 bg-blue-500 text-white rounded"
             >
               Associer les décisions
