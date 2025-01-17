@@ -23,6 +23,10 @@ def create_app():
             'schedule': crontab(hour=3, minute=15),
             # 'args': (),
         },
+        'delete-unmatched-decisions-task': {
+            'task': 'decisions.tasks.delete_unmatched_decisions_task',
+            'schedule': crontab(hour=3, minute=45),
+        },
     }
     app.autodiscover_tasks()
     return app

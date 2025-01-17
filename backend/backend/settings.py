@@ -1,3 +1,4 @@
+from datetime import datetime
 from pathlib import Path
 from os import getenv
 from os.path import join
@@ -165,6 +166,7 @@ class LogMiddleware:
 # CELERY
 CELERY_BROKER_URL = getenv('CELERY_BROKER_URL')
 CELERY_RESULT_BACKEND = getenv('CELERY_RESULT_BACKEND')
+CELERY_ROOT_LOG_PATH = getenv('CELERY_ROOT_LOG_PATH')
 
 # JUDILIBRE API
 JUDILIBRE_OAUTH_URL = getenv('JUDILIBRE_OAUTH_URL')
@@ -178,3 +180,58 @@ TYPESENSE_HOST = getenv('TYPESENSE_HOST')
 TYPESENSE_PORT = getenv('TYPESENSE_PORT')
 TYPESENSE_API_KEY = getenv('TYPESENSE_API_KEY')
 TYPESENSE_COLLECTION_NAME = getenv('TYPESENSE_COLLECTION_NAME')
+
+# LOGGING setup
+DJANGO_ROOT_LOG_PATH = getenv('DJANGO_ROOT_LOG_PATH')
+current_date = datetime.now()
+day = current_date.strftime("%d")
+month = current_date.strftime("%m")
+year = current_date.strftime("%Y")
+
+LOG_DIR = join(DJANGO_ROOT_LOG_PATH, year, month)
+Path(LOG_DIR).mkdir(parents=True, exist_ok=True)
+LOG_FILE = join(LOG_DIR, f"{day}.log")
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s function %(func)s %(pathname)s at line %(lineno)s:\n\t %(message)s',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '%(levelname)s %(message)s',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.FileHandler',
+            'filename': LOG_FILE,
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],
+            'level': 'DEBUG', # if DEBUG else 'INFO',
+            'propagate': True,
+        },
+        'backend': {
+            'handlers': ['file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'django.utils.autoreload': {
+            'level': 'INFO',
+            'handlers': ['console'],
+            'propagate': False,
+        },
+    },
+}

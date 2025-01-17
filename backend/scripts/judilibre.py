@@ -11,7 +11,9 @@ from pandas import date_range
 from time import time
 from django.core.paginator import Paginator
 from typing import List
-from django.db.models import Count
+# from django.db.models import Count
+import logging
+from logging.handlers import TimedRotatingFileHandler
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
@@ -20,7 +22,7 @@ django.setup()
 
 from decisions.models import RawDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
-from cleaner_utils import clean_text
+from .cleaner_utils import clean_text
 from django.conf import settings
 
 from datetime import datetime, timedelta
@@ -37,6 +39,32 @@ def connect_to_typesense(connection_timeout_seconds : int = 600):
         'connection_timeout_seconds': connection_timeout_seconds # we need to increase the timeout because insertion of large data takes time
     })
     return client
+
+def setup_logger(logger_name: str = "ExportLogger"):
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.INFO)
+    current_date = datetime.now()
+    year = current_date.strftime('%Y')
+    month = current_date.strftime('%m')
+    day = current_date.strftime('%d')
+    
+    log_dir = join(settings.CELERY_ROOT_LOG_PATH, year, month)
+    Path(log_dir).mkdir(parents=True, exist_ok=True)
+    log_filename = join(log_dir, f"{day}.log")
+    
+    handler = TimedRotatingFileHandler(
+        filename=log_filename,
+        when="midnight",
+        encoding="utf-8"
+    )
+    handler.suffix = "%Y-%m-%d"
+    handler.level = logging.INFO
+    
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    handler.setFormatter(formatter)
+    handler.setLevel(logging.INFO)
+    logger.addHandler(handler)
+    return logger
 
 def get_typesense_collection(client: typesense.Client):
     # delete data collection if it exists
@@ -123,15 +151,16 @@ def get_query_response(access_token: str= None, judilibre_url: str= None, params
     }, params=params)
     return response.json()
 
-def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_client: typesense.Client):
+def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_client: typesense.Client, logger: logging.Logger, batch_num: int = 0):
     decisions = decisions_batch['results']
+    logger.info(f"Batch {batch_num} - Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch {batch_num} : {decisions_batch['total']}")
     validated_decisions = []
     for decision in decisions:
         serializer = RawDecisionsSerializer(data=decision)
         if serializer.is_valid():
             validated_decisions.append(serializer.create(serializer.validated_data))
         else:
-            print(serializer.errors)
+            logger.error(serializer.errors)
     
     validated_decisions = RawDecisionsModel.objects.bulk_create(validated_decisions, ignore_conflicts=True) # ignore_conflicts=True to avoid IntegrityError when trying to insert duplicate decisions (same j_id)
     
@@ -149,7 +178,10 @@ def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_cli
         })
     insert_decisions_batch_typesense(typesense_client, typesense_decisions, batch_size)
 
-def delete_unmatched_decisions(typesense_client: typesense.Client):
+def delete_unmatched_decisions():
+    typesense_client = connect_to_typesense()
+    logger = setup_logger()
+    
     raw_collection_decisions = typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.export( {'include_fields' : 'id'} )
     raw_ids = []
     for decision in raw_collection_decisions.strip().splitlines():
@@ -158,6 +190,8 @@ def delete_unmatched_decisions(typesense_client: typesense.Client):
     for decision in raw_decisions:
         if not decision.id in raw_ids:
             typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents[decision.id].delete()
+    
+    logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
 
 def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     def refresh_token_if_needed():
@@ -176,16 +210,19 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         nonlocal decisions_batch
         nonlocal typesense_client
         nonlocal batch_size
+        nonlocal logger
         
         decisions_batch = get_query_response(access_token, export_url, export_params)
-        insert_decisions_batch(decisions_batch, batch_size, typesense_client)
+        insert_decisions_batch(decisions_batch, batch_size, typesense_client, logger, export_params["batch"])
         
-        print(f"Processed batch {export_params['batch']} from {export_params['date_start']} to {export_params['date_end']}")
-        print(f"RawDecisions size: {RawDecisionsModel.objects.count()}, total results: {decisions_batch['total']}")
-        print(f"Next batch: {decisions_batch['next_batch']}")
-        print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
+        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']} a été traité.")
+        logger.info(f"Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch: {decisions_batch['total']}")
+        if decisions_batch.get("next_batch") is not None:
+            logger.info(f"Le batch suivant : {decisions_batch['next_batch']}")
+        logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
 
     # Initial setup
+    logger = setup_logger()
     access_token = authenticate_judilibre()
     export_url = settings.JUDILIBRE_URL + "export"
     current_date = start_date
@@ -223,9 +260,7 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         export_params["batch"] = 0
         refresh_token_if_needed()
 
-    # Delete unmatched decisions from Typesense
-    delete_unmatched_decisions(typesense_client)
-    print("All batches completed.")
+    logger.info("Exportation des décisions terminée.")
     pbar.close()
 
 def get_values_from_taxonomy(query: str, context_value: str= 'ca'):
@@ -298,23 +333,8 @@ def main_3():
     # insert_decisions_typesense(typesense_client, batch_size)
     # count duplicate decisions by j_texte field in my collection
     # print(RawDecisionsModel.objects.values('id').annotate(count=Count('texte_net')).filter(count__gt=1))
-    all_decisions = typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.export( {'include_fields' : 'id'} )
     # loop over all decisions and search for un existing decisions in the database
-    decisions = []
-    for decision in all_decisions.strip().splitlines():
-        decisions.append(loads(decision))
-    print(f"{len(decisions) = }")
-    print(f"{len(set([decision['id'] for decision in decisions])) = }")
-    print(f"{len(RawDecisionsModel.objects.all()) = }")
-    for decision in decisions:
-        if not RawDecisionsModel.objects.filter(id=decision['id']).exists():
-            typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents[decision['id']].delete()
     print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
-    
-          
-        
-    
-    
     
 if __name__ == "__main__":
     main_3()
