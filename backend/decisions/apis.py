@@ -109,4 +109,7 @@ class Associer(views.APIView):
                 validated_decision = serializer.validated_data
                 validated_data.append(serializer.create(validated_decision))
         DatasetsDecisionsModel.objects.bulk_create(validated_data)
+        # update dataset size
+        dataset.size = DatasetsModel.objects.filter(dataset=dataset).count()
+        dataset.save()
         return response.Response(data={"message": "Decision associated successfully"}, status=200)

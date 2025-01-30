@@ -46,7 +46,7 @@ class RawDecisionsModel(DecisionsModel):
 
 class DatasetsDecisionsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
-    dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='dataset_decision')
+    dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.CASCADE, related_name='dataset_decision')
     raw_decision = models.ForeignKey('decisions.RawDecisionsModel', on_delete=models.DO_NOTHING, related_name='raw_decision')
     deleted = models.BooleanField(default=False)
     add_date = models.DateTimeField(auto_now_add=True)

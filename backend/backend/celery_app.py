@@ -16,7 +16,7 @@ from decisions.tasks import export_ca_decisions_daily_task
 def create_app():
     # celery -A backend.celery_app  worker -B -l info > celery_output.log 2> celery.log
     # to solve task discovered but not executed : found in https://stackoverflow.com/questions/48877823/django-celery-receiving-and-accepting-tasks-but-not-executing-them/56747636
-    # celery -A <App_name> worker -l info --without-gossip --without-mingle --without-heartbeat -Ofair --pool=solo
+    # celery -A <App_name> worker -l info --without-gossip --without-mingle --without-heartbeat -Ofair --pool=solo [be careful from pool=solo as we need paralel processing]
     app = Celery('backend')
     app.config_from_object('django.conf:settings', namespace='CELERY')
     app.conf.beat_schedule = {

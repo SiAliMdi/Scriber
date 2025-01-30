@@ -98,6 +98,5 @@ class DatasetsDecisionsSerializer(serializers.ModelSerializer):
         return new_data
     
     def create(self, validated_data):
-        print("creating")
         return DatasetsDecisionsModel(**validated_data)
     

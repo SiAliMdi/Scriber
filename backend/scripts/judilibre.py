@@ -23,7 +23,7 @@ django.setup()
 
 from decisions.models import RawDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
-from cleaner_utils import clean_text
+from .cleaner_utils import clean_text
 from django.conf import settings
 from django.db.models import Count, Subquery, OuterRef
 from datetime import datetime, timedelta
@@ -156,7 +156,6 @@ def get_query_response(access_token: str= None, judilibre_url: str= None, params
 
 def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_client: typesense.Client, logger: logging.Logger, batch_num: int = 0):
     decisions = decisions_batch['results']
-    # logger.info(f"Le batch {batch_num} contient : {decisions_batch['total']} décisions.")
     validated_decisions = []
     for decision in decisions:
         serializer = RawDecisionsSerializer(data=decision)
@@ -166,21 +165,7 @@ def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_cli
             logger.error(serializer.errors)
     
     validated_decisions = RawDecisionsModel.objects.bulk_create(validated_decisions, ignore_conflicts=True) # ignore_conflicts=True to avoid IntegrityError when trying to insert duplicate decisions (same j_id)
-    
-    """ typesense_decisions = []
-    for decision in validated_decisions:
-        decision_date = datetime.strptime(decision.j_date, '%Y-%m-%d')
-        typesense_decisions.append({
-            "id": str(decision.id),
-            "j_rg": decision.j_rg,
-            "j_date": int(datetime.combine(decision_date, datetime.min.time()).timestamp()),
-            "j_ville": decision.j_ville,
-            "j_chambre": decision.j_chambre,
-            "j_type": decision.j_type,
-            "j_texte": clean_text(decision.texte_net)
-        })
-    insert_decisions_batch_typesense(typesense_client, typesense_decisions, batch_size) """
-       
+
 def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     def refresh_token_if_needed():
         nonlocal access_token, start_token_time
@@ -203,12 +188,8 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         decisions_batch = get_query_response(access_token, export_url, export_params)
         insert_decisions_batch(decisions_batch, batch_size, typesense_client, logger, export_params["batch"])
         
-        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']}, contenant {decisions_batch['total']} décisions, a été traité.")
-        # logger.info(f"Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch: {decisions_batch['total']}")
-        """ if decisions_batch.get("next_batch") is not None:
-            logger.info(f"Le batch suivant : {decisions_batch['next_batch']}") """
-        # logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
-
+        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']}, contenant {len(decisions_batch['results']) }/{decisions_batch['total'] } décisions, a été traité.")
+        
     def delete_unmatched_decisions():
         t1 = time()
         log_handler = next((h for h in logger.handlers if isinstance(h, logging.FileHandler)), None)
@@ -342,7 +323,7 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         # Batch check existence in PostgreSQL
         ids_to_delete = []
         paginator = Paginator(sorted(ts_ids), DELETE_BATCH_SIZE)
-        progress_log = paginator.count // 4
+        progress_log = max(paginator.count // 4, 1)
         with tqdm(total=paginator.count, desc="Vérification des décisions de Typesense", file=  log_file) as pbar:
             for i, page_num in enumerate(paginator.page_range):
                 page = paginator.page(page_num)
@@ -362,7 +343,7 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         if ids_to_delete:
             logger.info(f"Suppression de {len(ids_to_delete)} décisions duplicatas dans Typesense")
             paginator = Paginator(ids_to_delete, DELETE_BATCH_SIZE)
-            progress_log = paginator.count // 4
+            progress_log = max(paginator.count // 4, 1)
             with tqdm(total=paginator.count, desc="Suppression des décisions Typesense", file=log_file) as pbar:
                 for i, page_num in enumerate(paginator.page_range):
                     page = paginator.page(page_num)
@@ -382,9 +363,11 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         db_count = RawDecisionsModel.objects.count()
         logger.info(f"Sync terminée. Typesense : {ts_count} | PostgreSQL : {db_count}")
         logger.info(f"Typesense -> Supprimées : {len(ids_to_delete)} | Insérées : {len(ids_to_insert)}")
-        net_time = f"{time() - t1:.2f}"
+        net_time = time() - t1
+        message = (f"{net_time:.2f} secondes" if net_time <= 60 
+            else f"{net_time / 60:.2f} minutes")
         # human readable time
-        logger.info(f"Temps de netoyage : {net_time} seconds") if net_time < "60" else logger.info(f"Temps de netoyage : {net_time/60:.2f} minutes")
+        logger.info(f"Temps de netoyage : {message}.")
 
     # Initial setup
     t1 = time()
@@ -433,11 +416,11 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     # delete empty decisions from the database
     RawDecisionsModel.objects.filter(texte_net="").delete()
     RawDecisionsModel.objects.filter(texte_net__isnull=True).delete()
-    # logger.info("Suppression des décisions dupliquées...")
+    """ # logger.info("Suppression des décisions dupliquées...")
     # delete duplicated decisions from the database but keep the recent entry (newest created_at date) in each duplicate group
     # ids_to_keep = RawDecisionsModel.objects.filter(texte_net=OuterRef('texte_net')).order_by('-created_at').values('id')[:1]
     # Delete all duplicates except the one we're keeping
-    """ RawDecisionsModel.objects.filter(
+    RawDecisionsModel.objects.filter(
     texte_net__in=RawDecisionsModel.objects.values('texte_net')
         .annotate(count=Count('id'))
         .filter(count__gt=1)
@@ -445,9 +428,10 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         ).exclude(
             id__in=Subquery(ids_to_keep)
         ).delete() """
-    exportation_time = f"{time() - t1:.2f}"
-    # human readable time
-    logger.info(f"Exportation des décisions terminée dans : {exportation_time} seconds") if exportation_time < "60" else logger.info(f"Exportation des décisions terminée dans : {exportation_time/60:.2f} minutes")
+    exportation_time = time() - t1
+    message = (f"{exportation_time:.2f} secondes" if exportation_time <= 60 
+          else f"{exportation_time / 60:.2f} minutes")
+    logger.info(f"Exportation des décisions terminée dans : {message}.")
     logger.info(f"Nouvelle taille de la base de données : {RawDecisionsModel.objects.count()}")
     pbar.close()
 
