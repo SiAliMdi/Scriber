@@ -15,17 +15,15 @@ from decisions.tasks import export_ca_decisions_daily_task
 
 def create_app():
     # celery -A backend.celery_app  worker -B -l info > celery_output.log 2> celery.log
+    # to solve task discovered but not executed : found in https://stackoverflow.com/questions/48877823/django-celery-receiving-and-accepting-tasks-but-not-executing-them/56747636
+    # celery -A <App_name> worker -l info --without-gossip --without-mingle --without-heartbeat -Ofair --pool=solo
     app = Celery('backend')
     app.config_from_object('django.conf:settings', namespace='CELERY')
     app.conf.beat_schedule = {
         'export-ca-decisions-daily-task': {
             'task': 'decisions.tasks.export_ca_decisions_daily_task',
-            'schedule': crontab(hour=3, minute=15),
+            'schedule': crontab(hour=2, minute=15),
             # 'args': (),
-        },
-        'delete-unmatched-decisions-task': {
-            'task': 'decisions.tasks.delete_unmatched_decisions_task',
-            'schedule': crontab(hour=3, minute=45),
         },
     }
     app.autodiscover_tasks()

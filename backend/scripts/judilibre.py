@@ -1,6 +1,7 @@
 from pathlib import Path
 from os import environ
 from os.path import join
+import uuid
 import typesense
 from requests import request
 from json import dump, loads
@@ -22,13 +23,16 @@ django.setup()
 
 from decisions.models import RawDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
-from .cleaner_utils import clean_text
+from cleaner_utils import clean_text
 from django.conf import settings
-
+from django.db.models import Count, Subquery, OuterRef
 from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from more_itertools import chunked
+from itertools import islice
+import math
 
-
-def connect_to_typesense(connection_timeout_seconds : int = 600):
+def connect_to_typesense(connection_timeout_seconds : int = 6000):
     client = typesense.Client({
         'nodes': [{
             'host': settings.TYPESENSE_HOST,
@@ -68,8 +72,8 @@ def setup_logger(logger_name: str = "ExportLogger"):
 
 def get_typesense_collection(client: typesense.Client):
     # delete data collection if it exists
-    client.collections[settings.TYPESENSE_COLLECTION_NAME].delete()
     try:
+        # client.collections[settings.TYPESENSE_COLLECTION_NAME].delete()
         data_collection = client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()
         print("collection found")
     except typesense.exceptions.ObjectNotFound:
@@ -79,7 +83,7 @@ def get_typesense_collection(client: typesense.Client):
             "fields": [
                 {"name": "id", "type": "string", "facet": False, "index": True}, # id of document in database
                 # {"name": "j_id", "type": "string", "index": False},
-                {"name": "j_rg", "type": "string", "sort": True},
+                {"name": "j_rg", "type": "string", "sort": True, "facet": True},
                 {"name": "j_juridiction", "type": "string", "facet": True, "sort": True},
                 {"name": "j_date", "type": "int64", "facet": True, "sort": True}, # as advised by https://threads.typesense.org/2J32f38 , the only way to store dates for now
                 {"name": "j_ville", "type": "string", "facet": True, "sort": True},
@@ -130,7 +134,7 @@ def query_typesense_data_collection(client, query: str, query_by: str | List[str
     search_results = client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.search(search_parameters)
     return search_results
 
-def authenticate_judilibre():  
+def authenticate_judilibre():
     oauth_url = settings.JUDILIBRE_OAUTH_URL
     client_id = settings.JUDILIBRE_CLIENT_ID
     client_secret = settings.JUDILIBRE_CLIENT_SECRET
@@ -142,7 +146,6 @@ def authenticate_judilibre():
         "scope": scope,
         "grant_type": "client_credentials"
     })
-    print(response.status_code, "response from judilibre oauth")
     return response.json()['access_token']
 
 def get_query_response(access_token: str= None, judilibre_url: str= None, params: dict= {}):
@@ -153,7 +156,7 @@ def get_query_response(access_token: str= None, judilibre_url: str= None, params
 
 def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_client: typesense.Client, logger: logging.Logger, batch_num: int = 0):
     decisions = decisions_batch['results']
-    logger.info(f"Batch {batch_num} - Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch {batch_num} : {decisions_batch['total']}")
+    # logger.info(f"Le batch {batch_num} contient : {decisions_batch['total']} décisions.")
     validated_decisions = []
     for decision in decisions:
         serializer = RawDecisionsSerializer(data=decision)
@@ -164,7 +167,7 @@ def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_cli
     
     validated_decisions = RawDecisionsModel.objects.bulk_create(validated_decisions, ignore_conflicts=True) # ignore_conflicts=True to avoid IntegrityError when trying to insert duplicate decisions (same j_id)
     
-    typesense_decisions = []
+    """ typesense_decisions = []
     for decision in validated_decisions:
         decision_date = datetime.strptime(decision.j_date, '%Y-%m-%d')
         typesense_decisions.append({
@@ -176,23 +179,8 @@ def insert_decisions_batch(decisions_batch: dict, batch_size: int, typesense_cli
             "j_type": decision.j_type,
             "j_texte": clean_text(decision.texte_net)
         })
-    insert_decisions_batch_typesense(typesense_client, typesense_decisions, batch_size)
-
-def delete_unmatched_decisions():
-    typesense_client = connect_to_typesense()
-    logger = setup_logger()
-    
-    raw_collection_decisions = typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.export( {'include_fields' : 'id'} )
-    raw_ids = []
-    for decision in raw_collection_decisions.strip().splitlines():
-        raw_ids.append(loads(decision)['id'])
-    raw_decisions = RawDecisionsModel.objects.all()
-    for decision in raw_decisions:
-        if not decision.id in raw_ids:
-            typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents[decision.id].delete()
-    
-    logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
-
+    insert_decisions_batch_typesense(typesense_client, typesense_decisions, batch_size) """
+       
 def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     def refresh_token_if_needed():
         nonlocal access_token, start_token_time
@@ -215,13 +203,191 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         decisions_batch = get_query_response(access_token, export_url, export_params)
         insert_decisions_batch(decisions_batch, batch_size, typesense_client, logger, export_params["batch"])
         
-        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']} a été traité.")
-        logger.info(f"Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch: {decisions_batch['total']}")
-        if decisions_batch.get("next_batch") is not None:
-            logger.info(f"Le batch suivant : {decisions_batch['next_batch']}")
-        logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
+        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']}, contenant {decisions_batch['total']} décisions, a été traité.")
+        # logger.info(f"Quantité de décisions dans la base : {RawDecisionsModel.objects.count()}, Quantité de décisions dans le batch: {decisions_batch['total']}")
+        """ if decisions_batch.get("next_batch") is not None:
+            logger.info(f"Le batch suivant : {decisions_batch['next_batch']}") """
+        # logger.info(f"Quantité de décisions dans le moteur de recherche : {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
+
+    def delete_unmatched_decisions():
+        t1 = time()
+        log_handler = next((h for h in logger.handlers if isinstance(h, logging.FileHandler)), None)
+        log_file = log_handler.stream if log_handler else sys.stdout
+        collection_name = settings.TYPESENSE_COLLECTION_NAME
+
+        # Constants
+        FILTER_BY_MAX_CHARS = 4000  # Typesense filter_by character limit
+        DELETE_BATCH_SIZE = 1000     # Batch size for deletions
+        INSERT_CHECK_BATCH = 1000   # Batch size for existence checks
+        INSERT_BATCH_SIZE = 1000     # Batch size for document inserts
+        MAX_THREADS = 20            # Max threads for parallel execution
+
+        # Helper function to calculate safe batch size for filter_by
+        def calculate_safe_batch_size(ids):
+            """Calculate batch size that won't exceed filter_by character limit."""
+            avg_id_length = sum(len(id) for id in ids) / len(ids)
+            return math.floor(FILTER_BY_MAX_CHARS / (avg_id_length + 6))  # 6 accounts for "id: || "
+        logger.info("Début de la synchronisation de la base de données avec Typesense...")
+        # Step 1: Insert missing documents using paginated queryset and threading
+        logger.info("1. Insertion des décisions non existantes dans Typesense...")
+        
+        # Get all PostgreSQL IDs using iterator
+        qs = RawDecisionsModel.objects.all().only('id').iterator()
+        ids_to_insert = []
+
+        # Function to check existence of a batch of IDs in Typesense
+        def check_existence_batch(batch):
+            try:
+                result = typesense_client.collections[collection_name].documents.search({
+                    'q': '*',
+                    'filter_by': f'id: {" || id: ".join(batch)}',
+                    'per_page': len(batch)
+                })
+                existing_ids = {doc['document']['id'] for doc in result['hits']}
+                return [id for id in batch if id not in existing_ids]
+            except typesense.exceptions.RequestMalformed:
+                # Fallback to individual checks if batch fails
+                missing_ids = []
+                for id in batch:
+                    try:
+                        typesense_client.collections[collection_name].documents[id].retrieve()
+                    except typesense.exceptions.ObjectNotFound:
+                        missing_ids.append(id)
+                return missing_ids
+
+        # Check existence in parallel using ThreadPoolExecutor
+        total_docs = RawDecisionsModel.objects.count()
+        milestones = {0, total_docs//4, total_docs//2, 3*total_docs//4, total_docs}
+        current_milestone = 0
+        processed = 0
+        with tqdm(total=RawDecisionsModel.objects.count(), desc="Vérification des décisions de la base", file=log_file) as pbar:
+            with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+                futures = []
+                
+                while True:
+                    batch = list(islice(qs, INSERT_CHECK_BATCH))
+                    if not batch:
+                        break
+                    
+                    str_batch = [str(d.id) for d in batch]
+                    safe_batch_size = calculate_safe_batch_size(str_batch)
+                    
+                    # Submit batches to thread pool
+                    for chunk in chunked(str_batch, safe_batch_size):
+                        futures.append(executor.submit(check_existence_batch, chunk))
+                        
+                    # Update progress tracking
+                    processed += len(batch)
+                
+                    # Check if we passed a milestone
+                    while milestones and processed >= current_milestone:
+                        pbar.update(current_milestone - pbar.n)
+                        current_milestone = min(milestones)
+                        milestones.discard(current_milestone)
+        
+            # Collect results from futures
+            for future in as_completed(futures):
+                ids_to_insert.extend(future.result())
+            
+            # Ensure 100% is reached
+            if pbar.n < total_docs:
+                pbar.update(total_docs - pbar.n)
+
+        # Function to prepare documents for insertion
+        def prepare_documents(batch_ids):
+            decisions = RawDecisionsModel.objects.filter(id__in=batch_ids)
+            return [{
+                "id": str(d.id),
+                "j_rg": d.j_rg,
+                "j_juridiction": d.j_juridiction,
+                # "j_date": int(d.j_date.timestamp()) if d.j_date else 0,
+                "j_date": int(datetime.combine(d.j_date, datetime.min.time()).timestamp()),
+                "j_ville": d.j_ville,
+                "j_chambre": d.j_chambre,
+                "j_type": d.j_type,
+                "j_texte": clean_text(d.texte_net)
+            } for d in decisions]
+
+        # Batch insert using ThreadPoolExecutor
+        if ids_to_insert:
+            logger.info(f"Insertion de {len(ids_to_insert)} non existantes dans Typesense")
+            paginator = Paginator(ids_to_insert, INSERT_BATCH_SIZE)
+
+            with tqdm(total=paginator.count, desc="Insertion des décisions", file=log_file) as pbar:
+                with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+                    futures = []
+                    for page_num in paginator.page_range:
+                        page = paginator.page(page_num)
+                        batch_ids = page.object_list
+                        
+                        # Submit document preparation and insertion tasks
+                        futures.append(executor.submit(prepare_documents, batch_ids))
+                    
+                    # Process completed futures
+                    for future in as_completed(futures):
+                        docs = future.result()
+                        if docs:
+                            typesense_client.collections[collection_name].documents.import_(docs)
+                            pbar.update(len(docs))
+        else:
+            logger.info("Aucune décision à insérer dans Typesense")
+
+        # Step 2: Delete documents existing in Typesense but not in PostgreSQL
+        logger.info("2. Suppression des décisions duplicatas dans Typesense...")
+        
+        # Get Typesense IDs
+        ts_docs = typesense_client.collections[collection_name].documents.export({'include_fields': 'id'})
+        ts_ids = {loads(line)['id'] for line in ts_docs.strip().splitlines()}
+        
+        # Batch check existence in PostgreSQL
+        ids_to_delete = []
+        paginator = Paginator(sorted(ts_ids), DELETE_BATCH_SIZE)
+        progress_log = paginator.count // 4
+        with tqdm(total=paginator.count, desc="Vérification des décisions de Typesense", file=  log_file) as pbar:
+            for i, page_num in enumerate(paginator.page_range):
+                page = paginator.page(page_num)
+                batch = list(page.object_list)
+                
+                exists_in_db = set(
+                    str(id) for id in 
+                    RawDecisionsModel.objects.filter(id__in=[uuid.UUID(id) for id in batch])
+                    .values_list('id', flat=True)
+                )
+                
+                ids_to_delete.extend([id for id in batch if id not in exists_in_db])
+                if i % progress_log == 0:
+                    pbar.update(len(batch))
+
+        # Batch delete using efficient import API
+        if ids_to_delete:
+            logger.info(f"Suppression de {len(ids_to_delete)} décisions duplicatas dans Typesense")
+            paginator = Paginator(ids_to_delete, DELETE_BATCH_SIZE)
+            progress_log = paginator.count // 4
+            with tqdm(total=paginator.count, desc="Suppression des décisions Typesense", file=log_file) as pbar:
+                for i, page_num in enumerate(paginator.page_range):
+                    page = paginator.page(page_num)
+                    batch = list(page.object_list)
+                    
+                    # Use batch delete filter
+                    typesense_client.collections[collection_name].documents.delete({
+                        'filter_by': f'id: {" || id: ".join(batch)}'
+                    })
+                    if i % progress_log == 0:
+                        pbar.update(len(batch))
+        else:
+            logger.info("Aucune décision à supprimer dans Typesense")
+
+        # Final stats
+        ts_count = typesense_client.collections[collection_name].retrieve()['num_documents']
+        db_count = RawDecisionsModel.objects.count()
+        logger.info(f"Sync terminée. Typesense : {ts_count} | PostgreSQL : {db_count}")
+        logger.info(f"Typesense -> Supprimées : {len(ids_to_delete)} | Insérées : {len(ids_to_insert)}")
+        net_time = f"{time() - t1:.2f}"
+        # human readable time
+        logger.info(f"Temps de netoyage : {net_time} seconds") if net_time < "60" else logger.info(f"Temps de netoyage : {net_time/60:.2f} minutes")
 
     # Initial setup
+    t1 = time()
     logger = setup_logger()
     access_token = authenticate_judilibre()
     export_url = settings.JUDILIBRE_URL + "export"
@@ -243,7 +409,9 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
     # Calculate progress bar length
     num_weeks = date_range(start=start_date, end=end_date, freq='W').shape[0]
     pbar = tqdm(total=num_weeks + 1)
-
+    logger.info(f"Exportation des décisions de la période entre {str(start_date.date())} ===>> {str(end_date.date())} en cours...")
+    count_decisions = RawDecisionsModel.objects.count()
+    logger.info(f"Taille de la base de données avant l'exportation : {count_decisions}")
     # Weekly export loop
     while current_date <= end_date:
         update_export_dates()
@@ -259,9 +427,32 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         # Reset batch number for the next week
         export_params["batch"] = 0
         refresh_token_if_needed()
-
-    logger.info("Exportation des décisions terminée.")
+    insertions_count = RawDecisionsModel.objects.count() - count_decisions
+    logger.info(f"Nombre d'inserions dans la base de données : {insertions_count}")
+    logger.info("Suppression des décisions vides...")
+    # delete empty decisions from the database
+    RawDecisionsModel.objects.filter(texte_net="").delete()
+    RawDecisionsModel.objects.filter(texte_net__isnull=True).delete()
+    # logger.info("Suppression des décisions dupliquées...")
+    # delete duplicated decisions from the database but keep the recent entry (newest created_at date) in each duplicate group
+    # ids_to_keep = RawDecisionsModel.objects.filter(texte_net=OuterRef('texte_net')).order_by('-created_at').values('id')[:1]
+    # Delete all duplicates except the one we're keeping
+    """ RawDecisionsModel.objects.filter(
+    texte_net__in=RawDecisionsModel.objects.values('texte_net')
+        .annotate(count=Count('id'))
+        .filter(count__gt=1)
+        .values('texte_net')
+        ).exclude(
+            id__in=Subquery(ids_to_keep)
+        ).delete() """
+    exportation_time = f"{time() - t1:.2f}"
+    # human readable time
+    logger.info(f"Exportation des décisions terminée dans : {exportation_time} seconds") if exportation_time < "60" else logger.info(f"Exportation des décisions terminée dans : {exportation_time/60:.2f} minutes")
+    logger.info(f"Nouvelle taille de la base de données : {RawDecisionsModel.objects.count()}")
     pbar.close()
+
+    # Delete unmatched decisions
+    delete_unmatched_decisions()
 
 def get_values_from_taxonomy(query: str, context_value: str= 'ca'):
     access_token = authenticate_judilibre()
@@ -327,14 +518,17 @@ def main_2():
 
 # insert decisions into typesense
 def main_3():
+    # insert_decisions_typesense(typesense_client, batch_size= 10_000)
     typesense_client = connect_to_typesense()
+    end_date = datetime.today().strftime('%Y-%m-%d')
+    start_date = (datetime.today() - timedelta(weeks=10)).strftime('%Y-%m-%d')    
+    start_date = datetime.strptime(start_date, '%Y-%m-%d')
+    end_date = datetime.strptime(end_date, '%Y-%m-%d')
     print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
-    # batch_size = 1000
-    # insert_decisions_typesense(typesense_client, batch_size)
+    export_ca_decisions(start_date, end_date)
     # count duplicate decisions by j_texte field in my collection
     # print(RawDecisionsModel.objects.values('id').annotate(count=Count('texte_net')).filter(count__gt=1))
     # loop over all decisions and search for un existing decisions in the database
-    print(f"Typesense data collection size {typesense_client.collections[settings.TYPESENSE_COLLECTION_NAME].retrieve()['num_documents']}")
     
 if __name__ == "__main__":
     main_3()

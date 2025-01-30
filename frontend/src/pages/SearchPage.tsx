@@ -11,14 +11,14 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 // import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { fetchCategories, fetchVilles, search, logCollection, associerDecisions } from "@/services/SearchServices"
+import { fetchCategories, fetchVilles, search, groupedSearch, logCollection, associerDecisions } from "@/services/SearchServices"
 import { Categorie } from "@/@types/categorie";
 import { Dataset } from "@/@types/dataset";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchParameters, Keyword, SearchResult, Decision } from "@/@types/search"
-import { forEach } from "lodash";
+import { CreateCategory } from "@/components/search-components/CreateCategory";
 
 
 const SearchPage = () => {
@@ -70,6 +70,7 @@ const SearchPage = () => {
   });
   const [pageSize, setPageSize] = useState<number>(250);
   const [keywordsValue, setKeywordsValue] = useState<string[]>([]);
+  const [createCategorieOpen, setCreateCategorieOpen] = useState<boolean>(false);
 
   const { toast } = useToast();
   useEffect(() => {
@@ -84,7 +85,7 @@ const SearchPage = () => {
     // logCollection();
     // search( searchParameters, setSearchResult); 
 
-  }, [selectedJuridictions, searchParameters,
+  }, [selectedJuridictions, searchParameters, categoriesDatasets
     // pageSize
   ]);
 
@@ -186,12 +187,16 @@ const SearchPage = () => {
       page: 1,
       per_page: pageSize,
       num_typos: 3,
+      group_by: "j_rg, j_juridiction, j_ville, j_date, j_chambre, j_type",
+      group_limit: 1,
       // prioritize_exact_match: false,
       // pre_segmented_query: false,
     };
     setSearchParameters(searchParameters);
-    search(searchParameters, setSearchResult).then(data => {
+    // search(searchParameters, setSearchResult).then(data => {
+    groupedSearch(searchParameters, setSearchResult).then(data => {
       setSearchResult(data);
+      console.log((data.hits));
     }
     );
   };
@@ -222,7 +227,8 @@ const SearchPage = () => {
     }
     const updatedSearchParameters = { ...searchParameters, page: newPage };
     setSearchParameters(updatedSearchParameters);
-    search(updatedSearchParameters, setSearchResult).then(data => {
+    // search(updatedSearchParameters, setSearchResult).then(data => {
+    groupedSearch(updatedSearchParameters, setSearchResult).then(data => {
       setSearchResult(data);
     }
     );
@@ -252,7 +258,7 @@ const SearchPage = () => {
           description: `Les décisions ont été associées avec succès`,
           className: "text-green-700",
         });
-      
+
       }
       ).catch((error) => {
         console.error("Error while associating decisions: ", error);
@@ -275,50 +281,64 @@ const SearchPage = () => {
         {/*1. First column: Search keywords */}
         <div className="flex-1 border-2 p-4 rounded-md border-blue-400 bg-teal-50 overflow-y-auto max-h-[90vh]">
           {/* First line */}
-          <div className="flex-1 pt-2">
-            <DropdownMenu >
-              <DropdownMenuTrigger className="border-2 border-blue-400 rounded-full w-auto px-2">
-                <Label className="font-bold cursor-pointer">
-                  Choisir des datasets
-                </Label>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {/* <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator /> */}
-                {/* <RadioGroup> */}
-
-                {Array.from(categoriesDatasets.keys()).map((categorie, i) => {
-                  return (
-                    <>
+          <div className="flex pt-2 justify-between align-middle">
+            <div>
+              <DropdownMenu>
+                <div className="relative">
+                  <DropdownMenuTrigger className="border-2 border-blue-400 rounded-full w-auto px-2">
+                    <Label className="font-bold cursor-pointer">
+                      Choisir des datasets
+                    </Label>
+                  </DropdownMenuTrigger>
+                </div>
+                <DropdownMenuContent
+                  className="absolute z-50 overflow-y-scroll max-h-64 bg-white border rounded shadow-lg w-48"
+                  onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus loss
+                >
+                  {Array.from(categoriesDatasets.keys()).map((categorie, i) => (
+                    <div key={categorie.id}>
                       <div className="flex items-center space-x-2">
-                        {/* <RadioGroupItem value={categorie.id || ""} id={"catégorie-"+i} /> */}
-                        <DropdownMenuLabel key={"catégorie-" + i}>{`${categorie.serialNumber}-${categorie.nomenclature}-${categorie.code}`}</DropdownMenuLabel>
+                        <DropdownMenuLabel>{`${categorie.serialNumber}-${categorie.nomenclature}-${categorie.code}`}</DropdownMenuLabel>
                       </div>
-                      {categoriesDatasets.get(categorie)?.map((dataset, index) => {
-                        return (
-                          <DropdownMenuItem key={"dataset-" + index}>
+                      {categoriesDatasets.get(categorie)?.map((dataset, index) => (
+                        <DropdownMenuItem
+                          key={dataset.id}
+                          onSelect={(e) => e.preventDefault()} // Prevent default selection behavior
+                        >
+                          <div
+                            className="flex items-center space-x-2 w-full"
+                            onClick={(e) => e.stopPropagation()} // Stop event bubbling
+                          >
                             <Checkbox
-                              id={"dataset-" + index}
+                              id={`dataset-${dataset.id}`}
                               checked={selectedDatasets.includes(dataset.id)}
-                              onClick={(e) => {
-                                return !selectedDatasets.includes(dataset.id)
-                                  ? setSelectedDatasets([...selectedDatasets, dataset.id])
-                                  : setSelectedDatasets(
-                                    selectedDatasets.filter(
-                                      (value) => value !== dataset.id))
-                              }} />
-                            <Label htmlFor={"dataset-" + index} className="cursor-pointer">{`${dataset.serialNumber}-${dataset.name}`} </Label>
-                          </DropdownMenuItem>
-                        )
-                      })}
-                    </>
-                  )
-                })}
-                {/* </RadioGroup> */}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button variant="secondary" className="flex-1 bg-blue-500 text-white float-right  font-bold" >Ajouter catégorie
-            </Button>
+                              onCheckedChange={(checked) => {
+                                setSelectedDatasets(prev => checked
+                                  ? [...prev, dataset.id]
+                                  : prev.filter(id => id !== dataset.id)
+                                );
+                              }}
+                            />
+                            <Label htmlFor={`dataset-${dataset.id}`} className="cursor-pointer">
+                              {`${dataset.serialNumber}-${dataset.name}`}
+                            </Label>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </div>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div>
+
+              <Button variant="secondary" className="flex-1 bg-blue-500 text-white float-right  font-bold"
+                onClick={() => setCreateCategorieOpen(true)}>
+                Ajouter catégorie
+              </Button>
+              {createCategorieOpen && <CreateCategory createCategorieOpen={createCategorieOpen} setCreateCategorieOpen={setCreateCategorieOpen}
+              />}
+            </div>
           </div>
           {/* Second line */}
           <div className="space-y-1 pt-8">

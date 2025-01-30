@@ -209,6 +209,74 @@ const search = async (
   }
 };
 
+const groupedSearch = async (
+  searchParameters: SearchParameters,
+  setSearchResult: React.Dispatch<React.SetStateAction<SearchResult>>
+): Promise<SearchResult> => {
+  try {
+    const searchResults = await TypesenseClient.collections(
+      `${import.meta.env.VITE_TYPESENSE_COLLECTION_NAME}`
+    )
+      .documents()
+      .search(searchParameters);
+
+    // Process grouped results
+    const groups = searchResults.grouped_hits?.map((group: any) => {
+      // Format group key according to your pattern: "15/05521-ca-paris-2025/01/12-sociale-arret"
+      const [j_rg, j_juridiction, j_ville, j_date, j_chambre, j_type] = group.group_key;
+      
+      // Convert timestamp to formatted date string
+      const date = new Date(parseInt(j_date) * 1000);
+      const formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+
+      // Create the group identifier string
+      const groupKey = `${j_rg}-${j_juridiction}-${j_ville}-${formattedDate}-${j_chambre}-${j_type}`
+        .toLowerCase()
+        .replace(/\s+/g, '-');
+
+      // Process hits within the group
+      const hits: Decision[] = group.hits.map((hit: any) => {
+        const document = hit.document;
+        return {
+          id: document.id,
+          j_texte: document.j_texte,
+          j_chambre: document.j_chambre,
+          j_date: formattedDate,
+          j_rg: document.j_rg,
+          j_ville: document.j_ville,
+          j_type: document.j_type,
+          j_juridiction: document.j_juridiction,
+          highlight: hit.highlight?.j_texte?.snippet || '',
+        };
+      });
+
+      return {
+        groupKey,
+        hits,
+        // Add any additional group-level information here
+      };
+    }) || [];
+
+    const decisions: Decision[] = groups.map(group => group.hits).flat();
+    const searchResult: SearchResult = {
+      hits: decisions,
+      found: searchResults.found,
+      total: searchResults.out_of,
+      page: searchResults.page,
+      search_time_ms: searchResults.search_time_ms,
+    };
+
+    setSearchResult(searchResult);
+    return searchResult;
+
+  } catch (error) {
+    console.error("Error while querying Typesense:", error);
+    throw error;
+  }
+};
+
 const logCollection = async () => {
   try {
     const collection = await TypesenseClient.collections(
@@ -260,6 +328,7 @@ export {
   fetchCategories,
   fetchVilles,
   search,
+  groupedSearch,
   logCollection,
   associerDecisions,
 };
