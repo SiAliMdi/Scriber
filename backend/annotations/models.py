@@ -17,15 +17,12 @@ class AnnotationsModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     updator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='annotations_updater', blank=True, null=True)
-
-    objects = models.Manager()
+    deleted = models.BooleanField(default=False)
+    # objects = models.Manager()
 
     
     def save(self, *args, **kwargs):
         self.clean()
-        # check if the annotation already exists
-        if AnnotationsModel.objects.filter(text=self.text, start_offset=self.start_offset, end_offset=self.end_offset, label=self.label, state=self.state).exists():
-            return
         return super().save(*args, **kwargs)
     
     class Meta:
@@ -38,7 +35,7 @@ class AnnotationsModel(models.Model):
 
 class BinaryAnnotationsModel(AnnotationsModel):
     '''
-    Suppoed to contain the binary annotations for a whole decision
+    Supposed to contain the binary annotations for a whole decision
     '''
     start_offset = None
     end_offset = None
@@ -46,21 +43,21 @@ class BinaryAnnotationsModel(AnnotationsModel):
     model_annotator = models.ForeignKey('ai_models.Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='model_annotator', blank=True, null=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_creator', blank=False, null=False)
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='binary_annotations_decision', blank=False, null=False)
-    human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_human_annotator', blank=True, null=True)
+    # human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_human_annotator', blank=True, null=True)
     label = models.ForeignKey('datasets.Labels', on_delete=models.DO_NOTHING, related_name='binary_annotations_label', blank=False, null=False)
     updator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_updater', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     class Meta:
         db_table = "binary_annotations"
         indexes = [
             models.Index(fields=[ 'label',]),
-            models.Index(fields=[ 'decision',]),
-                   ]
-    
+            models.Index(fields=[ 'decision',]),]
+        ordering = ['-created_at']
+        
+        
     def save(self, *args, **kwargs):
         self.clean()
-        # check if the annotation already exists
-        if BinaryAnnotationsModel.objects.filter( label=self.label, state=self.state).exists():
-            return
         return super().save(*args, **kwargs)
 
 class TextAnnotationsModel(AnnotationsModel):
