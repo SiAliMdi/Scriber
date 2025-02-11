@@ -10,10 +10,7 @@ import DatasetsPage from './pages/DatasetsPage'
 import ModelsPage from './pages/ModelsPage'
 import PromptsPage from './pages/PromptsPage'
 import SearchPage from './pages/SearchPage'
-// import '@fontsource/roboto/300.css';
-// import '@fontsource/roboto/400.css';
-// import '@fontsource/roboto/500.css';
-// import '@fontsource/roboto/700.css';
+import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
 
 
 const  App: React.FC = () => {
@@ -32,6 +29,7 @@ const  App: React.FC = () => {
                     <Route path='/datasets/:id' element={<DatasetsPage/>}/>
                     <Route path='/models/:id' element={<ModelsPage/>}/>
                     <Route path='/prompts/:id' element={<PromptsPage/>}/>
+                    <Route path='/annoter_bin/:id' element={<BinaryAnnotationPage/>}/>
                 </Routes>
             </Router>
             
