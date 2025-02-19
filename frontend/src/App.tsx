@@ -11,6 +11,7 @@ import ModelsPage from './pages/ModelsPage'
 import PromptsPage from './pages/PromptsPage'
 import SearchPage from './pages/SearchPage'
 import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
+import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
 
 
 const  App: React.FC = () => {
@@ -30,6 +31,7 @@ const  App: React.FC = () => {
                     <Route path='/models/:id' element={<ModelsPage/>}/>
                     <Route path='/prompts/:id' element={<PromptsPage/>}/>
                     <Route path='/annoter_bin/:id' element={<BinaryAnnotationPage/>}/>
+                    <Route path='/annoter_ext/:id' element={<ExtractiveAnnotationPage/>}/>
                 </Routes>
             </Router>
             
