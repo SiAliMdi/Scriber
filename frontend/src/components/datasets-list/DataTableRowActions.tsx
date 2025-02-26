@@ -47,6 +47,14 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
                 datasetSerialNumber: row.original.serialNumber
               }
             })}>Annoter Binaire</DropdownMenuItem>
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_ext/${row.original.id}`,
+            {
+              state: {
+                datasetId: row.original.id,
+                datasetSerialNumber: row.original.serialNumber,
+                labels : row.original.labels,
+              }
+            })} >Annoter Extractif</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

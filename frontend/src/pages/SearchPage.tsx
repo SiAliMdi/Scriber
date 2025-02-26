@@ -358,6 +358,7 @@ const SearchPage = () => {
                         )
                       )
                     }
+                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
                   />
                   <Checkbox
                     id={"matchExact" + keyword.id}
@@ -545,6 +546,7 @@ const SearchPage = () => {
           {/* Seventh line */}
           <div className="pt-6">
             <button
+              type="submit"
               onClick={handleSearch}
               className="px-4 py-2 bg-blue-500 text-white rounded"
             >

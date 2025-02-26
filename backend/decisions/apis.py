@@ -1,12 +1,13 @@
 from rest_framework import views, permissions, response, generics, status
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
-from annotations.models import BinaryAnnotationsModel
+from annotations.models import BinaryAnnotationsModel, TextAnnotationsModel
 from annotations.serializers import BinaryAnnotationsSerializer
 from datasets.models import DatasetsModel, Labels
 from users import services as users_services
 from . import services
 from .models import RawDecisionsModel, DatasetsDecisionsModel
-from .serializers import RawDecisionsSerializer, DatasetsDecisionsSerializer
+from .serializers import DecisionWithAnnotationsSerializer, RawDecisionsSerializer, DatasetsDecisionsSerializer
 from uuid import UUID
 from time import time
 
@@ -50,7 +51,7 @@ class BinDatasetRawDecisionsView(views.APIView):
 
         # Sérialisation des décisions
         raw_decisions_serializer = RawDecisionsSerializer(raw_decisions, many=True)
-
+        raw_decisions_serializer.data.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
         # Optimisation : Récupérer toutes les annotations de l'utilisateur en une seule requête
         annotations = BinaryAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
@@ -109,7 +110,67 @@ class BinDatasetRawDecisionsView(views.APIView):
             decision_id__in=decisions_ids  # Ajout d'un filtre pour éviter les annotations non concernées
         ).update(deleted=True)
         return response.Response({"message": f"{deleted_count} decisions and their annotations marked as deleted."}, status=status.HTTP_200_OK)
+
+
+
+class ExtDatasetRawDecisionsView(views.APIView):
+    authentication_classes = (users_services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
     
+    def get(self, request, dataset_id):
+        try:
+            dataset = DatasetsModel.objects.get(id=dataset_id)
+        except DatasetsModel.DoesNotExist:
+            return response.Response({"error": "Dataset not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        decisions = DatasetsDecisionsModel.objects.filter(dataset=dataset, deleted=False)
+        serializer = DecisionWithAnnotationsSerializer(decisions, many=True, context={'request': request})
+        
+        # Calculate total annotation counts for the dataset
+        user = request.user
+        total_counts = TextAnnotationsModel.objects.filter(
+            decision__dataset=dataset, creator=user, deleted=False
+        ).values('label').annotate(count=Count('id', filter=Q(decision__dataset=dataset, creator=user, deleted=False)), )
+        total_annotation_counts = {str(item['label']): item['count'] for item in total_counts}
+        
+        response_data = {
+            "decisions": serializer.data,
+            "total_annotation_counts": total_annotation_counts
+        }
+        return response.Response(response_data, status=status.HTTP_200_OK)
+
+    def delete(self, request, dataset_id):
+        if not dataset_id:
+            return response.Response({"error": "dataset_id path parameter is required"}, 
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+        decisions_ids = request.data.get("decisionsIds", [])
+        
+        if not decisions_ids:
+            return response.Response({"error": "No decision IDs provided"}, 
+                                    status=status.HTTP_400_BAD_REQUEST)
+        
+        # Mark dataset decisions as deleted
+        dataset_decisions = DatasetsDecisionsModel.objects.filter(
+            id__in=decisions_ids, 
+            dataset__id=dataset_id
+        )
+        updated = dataset_decisions.update(deleted=True)
+        if updated == 0:
+            return response.Response({"error": "No matching decisions found"}, 
+                                    status=status.HTTP_404_NOT_FOUND)
+
+        # Mark related text annotations as deleted
+        user = request.user
+        text_annotations_deleted = TextAnnotationsModel.objects.filter(
+            decision__dataset_id=dataset_id,
+            creator=user,
+            decision_id__in=decisions_ids
+        ).update(deleted=True)
+        return response.Response({
+            "message": f"Marked {updated} decisions and {text_annotations_deleted} annotations as deleted"
+        }, status=status.HTTP_200_OK)
+ 
 class RawDecisionsDetailView(views.APIView):
     def get(self, request, decision_id):
         if not request.user.is_authenticated:

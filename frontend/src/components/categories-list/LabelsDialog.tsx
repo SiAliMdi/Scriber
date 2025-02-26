@@ -7,12 +7,8 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Row } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
-import { useToast } from "@/components/ui/use-toast"
-import cloneDeep from 'lodash/cloneDeep';
-import { editCategorie } from "@/services/CategoriesServices";
 import {fetchLabels, updateLabel, deleteLabel} from "@/services/LabelsServices";
 import { NewLabelAlertDialog } from "./NewLabelAlertDialog"
 
@@ -23,11 +19,9 @@ interface LabelsDialogProps<TData> {
 const LabelsDialog = <TData,>({ row }: LabelsDialogProps<TData>) => {
 
     const [labels, setLabels] = useState(row.original.labels);
-    const { toast } = useToast();
-
     useEffect(() => {
         fetchLabels(row.original.id, setLabels);
-    }, []);
+    }, [row.original.labels]);
    
     return (
         (

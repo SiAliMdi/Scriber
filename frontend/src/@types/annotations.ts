@@ -8,4 +8,17 @@ type BinaryAnnotation = {
     updated_at ?: Date,
 }
 
-export type { BinaryAnnotation };
+type TextAnnotation = {
+    id: string;
+    text: string;
+    start_offset: number;
+    end_offset: number;
+    label: {
+        id: string;
+        label: string;
+        color: string;
+    };
+    decision: string;
+}
+
+export type { BinaryAnnotation, TextAnnotation };

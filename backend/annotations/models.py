@@ -11,7 +11,7 @@ class AnnotationsModel(models.Model):
     state = models.CharField(max_length=255, blank=True, null=True)
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='decision_annotation', blank=True, null=True)
     # to add: annotator (user) or (model)
-    human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='user_annotator', blank=True, null=True)
+    # human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='user_annotator', blank=True, null=True)
     
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='annotations_creator', blank=False, null=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -66,12 +66,11 @@ class TextAnnotationsModel(AnnotationsModel):
     '''
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='text_annotations_creator', blank=False, null=False)
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='text_annotations_decision', blank=False, null=False)
-    human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='text_annotations_human_annotator', blank=True, null=True)
     label = models.ForeignKey('datasets.Labels', on_delete=models.DO_NOTHING, related_name='text_annotations_label', blank=False, null=False)
     updator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='text_annotations_updater', blank=True, null=True)
     class Meta(AnnotationsModel.Meta):
         db_table = "text_annotations"
-        
+
 
 class ExtractionAnnotationsModel(models.Model):
     '''
