@@ -126,7 +126,7 @@ LANGUAGE_CODE = 'fr-FR'
 
 AUTH_USER_MODEL = "users.ScriberUsers"
 
-TIME_ZONE = 'Europe/Paris'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 

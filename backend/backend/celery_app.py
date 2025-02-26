@@ -20,6 +20,8 @@ def create_app():
     # celery -A <App_name> worker -l info --without-gossip --without-mingle --without-heartbeat -Ofair --pool=solo [be careful from pool=solo as we need paralel processing]
     app = Celery('backend')
     app.config_from_object('django.conf:settings', namespace='CELERY')
+    app.conf.enable_utc = True
+    app.conf.timezone = 'UTC'
     app.conf.beat_schedule = {
         'export-ca-decisions-daily-task': {
             'task': 'decisions.tasks.export_ca_decisions_daily_task',
