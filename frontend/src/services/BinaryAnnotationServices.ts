@@ -87,8 +87,6 @@ const updateBinaryAnnotation = async (annotationId: string, label: string) => {
 
 const deleteDatasetDecisions = async (datasetId: string, decisionsIds: string[]
 ) => {
-  console.log("Deleting decisions", decisionsIds);
-
   try {
     const token = sessionStorage.getItem("token");
     await axios.delete(

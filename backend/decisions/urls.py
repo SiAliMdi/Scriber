@@ -10,7 +10,8 @@ urlpatterns = [
     path("raws/<str:decision_id>/", apis.RawDecisionsDetailView.as_view(), name="raw_decision"),
     path("dataset/<str:dataset_id>/new/", apis.DatasetDecisionsDetailView.as_view(), name="all_raw_decisions"),
     # get all decisions of a dataset
-    path("bin_dataset/<str:dataset_id>/all/", apis.BinDatasetRawDecisionsView.as_view(), name="all_raw_decisions"),
+    path("bin_dataset/<str:dataset_id>/all/", apis.BinDatasetRawDecisionsView.as_view(), name="all_raw_decisions_bin"),
+    path("ext_dataset/<str:dataset_id>/all/", apis.ExtDatasetRawDecisionsView.as_view(), name="all_raw_decisions_ext"),
     # crud operations on a decision of a dataset
     path("dataset/<str:decision_id>/", apis.DatasetDecisionsDetailView.as_view(), name="all_raw_decisions"),
     ######## USED IN THE FRONTEND ########

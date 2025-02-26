@@ -3,80 +3,266 @@ import BasePage from "./BasePage";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings } from 'lucide-react';
+import { Settings, Trash2 } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
-import { deleteDatasetDecisions, fetchBinDecisionsWithAnnotations } from "@/services/BinaryAnnotationServices";
+import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions } from "@/services/ExtractiveAnnotationServices";
+// import { deleteDatasetDecisions } from "@/services/BinaryAnnotationServices";
 import { fetchLabels } from "@/services/LabelsServices";
 import { Decision } from "@/@types/decision";
-import { BinaryAnnotation } from "@/@types/annotations";
+import { TextAnnotation } from "@/@types/annotations";
 import { Label as LabelType } from "@/@types/label";
 import LabelsDialog from "@/components/annotation-forms/extractive/LabelsDialog";
-
+import { set } from "lodash";
 
 const ExtractiveAnnotationPage: React.FC = () => {
     const [decisions, setDecisions] = useState<Decision[]>([]);
-    const [annotations, setAnnotations] = useState<Record<string, BinaryAnnotation[]>>({});
-
+    const [annotations, setAnnotations] = useState<Record<string, TextAnnotation[]>>({});
+    const [totalAnnotationCounts, setTotalAnnotationCounts] = useState<Record<string, number>>({});
     const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
     const [checkedDecisions, setCheckedDecisions] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [labels, setLabels] = useState<LabelType[]>([]);
+    const [currentLabel, setCurrentLabel] = useState<LabelType | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const location = useLocation();
     const datasetId = location.state?.datasetId;
 
-    const [labels, setLabels] = useState<LabelType[]>();//location.state?.labels
-    const [currentLabel, setCurrentLabel] = useState<LabelType>({ id: "", label: "", color: "" });//labels[0] ??
-    const [isDialogOpen, setIsDialogOpen] = useState(false)
-
-
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const decisionRefs = useRef<(HTMLDivElement | null)[]>([]);
-    const selectedIndex = selectedDecision ? decisions.findIndex((d) => d.id === selectedDecision.id) + 1 : 0;
-    const totalDecisions = decisions.length;
 
+    // Fetch data on mount
     useEffect(() => {
-
         if (datasetId) {
-            fetchBinDecisionsWithAnnotations(datasetId, setDecisions, setAnnotations)
+            fetchTextDecisionsWithAnnotations(datasetId, setDecisions, setAnnotations, setTotalAnnotationCounts)
                 .then(() => {
                     setLoading(false);
-
+                    // Set initial selected decision explicitly after data is fetched
                     if (decisions.length > 0) {
                         setSelectedDecision(decisions[0]);
                     }
                     fetchLabels(datasetId, setLabels);
                 })
                 .catch((err) => {
-                    setError("Erreur lors de la récupération des décisions. " + err);
+                    setError("Error fetching decisions: " + err);
                     setLoading(false);
                 });
         } else {
-            setError("Aucun datasetId trouvé.");
+            setError("No datasetId found.");
             setLoading(false);
         }
     }, [datasetId]);
 
+    // Update selectedDecision when decisions change
     useEffect(() => {
-        fetchLabels(datasetId, setLabels);
-    }
-        , [labels]);
-
-    useEffect(() => {
-        if (decisions.length > 0) {
+        if (decisions.length > 0 && !selectedDecision) {
             setSelectedDecision(decisions[0]);
         }
-    }, [decisions]);
+    }, [decisions, selectedDecision]);
+
+    // Set initial label when labels are fetched
+    useEffect(() => {
+        if (labels.length > 0 && !currentLabel) {
+            setCurrentLabel(labels[0]);
+        }
+    }, [labels, currentLabel]);
+    useEffect(() => {
+        if (!selectedDecision) return;
+
+        // Clear existing content
+        const container = document.querySelector('.decision-text');
+        if (!container) return;
+
+        // Create a document fragment to build our content
+        const fragment = document.createDocumentFragment();
+        let lastIndex = 0;
+        const text = selectedDecision.j_texte || "";
+        const decisionAnnotations = annotations[selectedDecision.id] || [];
+
+        // Sort annotations by start offset
+        const sortedAnnotations = [...decisionAnnotations].sort((a, b) => a.start_offset - b.start_offset);
+
+        // Rebuild text with annotations
+        sortedAnnotations.forEach(annotation => {
+            // Add text before the annotation
+            if (annotation.start_offset > lastIndex) {
+                fragment.appendChild(document.createTextNode(
+                    text.slice(lastIndex, annotation.start_offset)
+
+                ));
+            }
+
+            // Create annotation span
+            const span = document.createElement("span");
+            span.style.backgroundColor = labels.find(l => l.id === annotation.label)?.color || "yellow";
+            span.textContent = text.slice(annotation.start_offset, annotation.end_offset);
+            span.title = labels.find(l => l.id === annotation.label)?.label || "Annotation";
+
+            // Add double-click handler
+            span.addEventListener("dblclick", () => handleAnnotationDelete(span, annotation.id));
+            fragment.appendChild(span);
+
+            lastIndex = annotation.end_offset;
+        });
+
+        // Add remaining text after last annotation
+        if (lastIndex < text.length) {
+            fragment.appendChild(document.createTextNode(text.slice(lastIndex)));
+        }
+
+        // Replace container content
+        container.innerHTML = "";
+        container.appendChild(fragment);
+
+    }, [selectedDecision, annotations, labels]);
+
+    const handleAnnotationDelete = (span: HTMLSpanElement, annotationId: string) => {
+        deleteAnnotation(annotationId)
+            .then(() => {
+                // Replace span with text content
+                const textNode = document.createTextNode(span.textContent || "");
+                span.parentNode?.replaceChild(textNode, span);
+
+                setAnnotations(prev => ({
+                    ...prev,
+                    [selectedDecision?.id]: prev[selectedDecision?.id].filter(a => a.id !== annotationId),
+                }));
+
+                setTotalAnnotationCounts(prev => ({
+                    ...prev,
+                    [currentLabel!.id]: (prev[currentLabel!.id] || 0) - 1,
+                }));
+            })
+            .catch(console.error);
+    };
+
+
+    // Handle text selection and annotation creation
+    // Handle text selection and annotation creation/deletion
+    const handleTextSelection = () => {
+        const selection = window.getSelection();
+        if (!selection || !selection.rangeCount || !currentLabel || !selectedDecision) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedText = selection.toString();
+        if (selectedText.trim().length === 0) return;
+
+        const preSelectionRange = range.cloneRange();
+        preSelectionRange.selectNodeContents(document.querySelector('.decision-text')!);
+        preSelectionRange.setEnd(range.startContainer, range.startOffset);
+        const startOffset = preSelectionRange.toString().length;
+        const endOffset = startOffset + selectedText.length;
+
+        // Check for existing annotations in the selected range
+        const existingAnnotations = annotations[selectedDecision.id] || [];
+        const existingAnnotation = existingAnnotations.find(ann =>
+            ann.start_offset <= startOffset &&
+            ann.end_offset >= endOffset //&&        ann.label === currentLabel.id
+        );
+
+        if (existingAnnotation) {
+            // Delete existing annotation
+            deleteAnnotation(existingAnnotation.id)
+                .then(() => {
+                    setAnnotations(prev => ({
+                        ...prev,
+                        [selectedDecision.id]: prev[selectedDecision.id].filter(a => a.id !== existingAnnotation.id),
+                    }));
+                    setTotalAnnotationCounts(prev => ({
+                        ...prev,
+                        [currentLabel.id]: (prev[currentLabel.id] || 0) - 1,
+                    }));
+
+                    // Remove the span from DOM
+                    const spans = document.querySelectorAll('.decision-text span');
+                    spans.forEach(span => {
+                        const spanStart = parseInt(span.getAttribute('data-start') || "0");
+                        const spanEnd = parseInt(span.getAttribute('data-end') || "0");
+                        if (spanStart === existingAnnotation.start_offset &&
+                            spanEnd === existingAnnotation.end_offset) {
+                            span.outerHTML = span.textContent || "";
+                        }
+                    });
+                })
+                .catch(console.error);
+            return;
+        }
+
+        // Create new annotation
+        const span = document.createElement("span");
+        span.style.backgroundColor = currentLabel.color || "yellow";
+        span.textContent = selectedText;
+        span.title = currentLabel.label;
+        span.setAttribute('data-start', startOffset.toString());
+        span.setAttribute('data-end', endOffset.toString());
+
+        range.deleteContents();
+        range.insertNode(span);
+        selection.removeAllRanges();
+
+        const annotationData = {
+            text: selectedText,
+            start_offset: startOffset,
+            end_offset: endOffset,
+            label: currentLabel.id,
+            decision: selectedDecision.id,
+        };
+
+        createAnnotation(annotationData)
+            .then((newAnnotation) => {
+                setAnnotations(prev => ({
+                    ...prev,
+                    [selectedDecision.id]: [...(prev[selectedDecision.id] || []), newAnnotation],
+                }));
+                setTotalAnnotationCounts(prev => ({
+                    ...prev,
+                    [currentLabel.id]: (prev[currentLabel.id] || 0) + 1,
+                }));
+
+                span.addEventListener("dblclick", () =>
+                    handleAnnotationDelete(span, newAnnotation.id)
+                );
+            })
+            .catch(console.error);
+    };
+
+
+    const handleDeleteSelected = () => {
+        const decisionIdsToDelete = Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]);
+
+        deleteExtractiveDatasetDecisions(datasetId, decisionIdsToDelete)
+            .then(() => {
+                const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id]);
+                setDecisions(remainingDecisions);
+                setCheckedDecisions({});
+                if (selectedDecision && !remainingDecisions.some((d) => d.id === selectedDecision.id)) {
+                    setSelectedDecision(remainingDecisions.length ? remainingDecisions[0] : null);
+                }
+            })
+            .catch((error) => {
+                console.error("Deletion failed:", error);
+            });
+    };
+
+    // Handle decision click from the left panel
+    const handleDecisionClick = (decision: Decision) => {
+        console.log("Selected decision:", decision); // Debug log
+        setSelectedDecision(decision);
+    };
 
     useEffect(() => {
-        if (selectedDecision) {
-            scrollToSelectedDecision(decisions.findIndex((d) => d.id === selectedDecision.id));
-        }
-    }, [selectedDecision]);
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [selectedDecision, decisions]);
+
 
     const handleKeyDown = (event: KeyboardEvent) => {
+
         if (event.key === "ArrowLeft") {
             goToPreviousDecision();
         }
@@ -89,66 +275,7 @@ const ExtractiveAnnotationPage: React.FC = () => {
         if (event.key === "ArrowDown") {
             goToNextDecision();
         }
-        /*if (event.key === " ") {
-        const currentIndex = decisions.findIndex((d) => d.id === selectedDecision.id);
-        const nextIndex = (currentIndex + 10) % decisions.length;
-        setSelectedDecision(decisions[nextIndex]);
-        scrollToSelectedDecision(currentIndex);
-        }*/
     };
-
-    useEffect(() => {
-        window.addEventListener("keydown", handleKeyDown);
-
-        return () => {
-            window.removeEventListener("keydown", handleKeyDown);
-        };
-    }, [selectedDecision]);
-
-    const handleTextSelection = () => {
-        const selection = window.getSelection();
-        if (selection && selection.toString().trim().length > 0 && currentLabel) {
-            const range = selection.getRangeAt(0);
-
-            // Create a span element to wrap the selected text
-            const span = document.createElement("span");
-            span.style.backgroundColor = currentLabel.color;
-            span.textContent = selection.toString();
-            span.title = currentLabel.label; // Add tooltip displaying the label
-
-            // Allow deletion: on double-click, remove the span and restore plain text
-            span.addEventListener("dblclick", () => {
-                const parent = span.parentNode;
-                if (parent) {
-                    parent.replaceChild(document.createTextNode(span.textContent || ""), span);
-                }
-            });
-
-            // Replace the selected text with our colored span
-            range.deleteContents();
-            range.insertNode(span);
-            selection.removeAllRanges();
-        }
-    };
-
-
-    // Tri alphabétique des niveaux
-    /* const sortedDecisions = [...decisions].sort((a, b) =>
-        a.j_date.localeCompare(b.j_date)
-    ); */
-
-    const handleDeleteSelected = () => {
-        const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id] ?? false);
-        setDecisions(remainingDecisions);
-        deleteDatasetDecisions(datasetId, Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]));
-        setCheckedDecisions({});
-        if (selectedDecision && !remainingDecisions.some((d) => d.id === selectedDecision.id)) {
-            setSelectedDecision(remainingDecisions.length ? remainingDecisions[0] : null);
-        }
-    };
-
-    if (loading) return <div className="p-4 text-center mt-10"><strong>Chargement des décisions...</strong> </div>;
-    if (error) return <div className="p-4 text-red-500 text-center mt-10"><strong>{error}</strong> </div>;
 
     const scrollToSelectedDecision = (index: number) => {
         if (decisionRefs.current[index]) {
@@ -185,13 +312,14 @@ const ExtractiveAnnotationPage: React.FC = () => {
         }, 500);
     };
 
+    if (loading) return <div className="p-4 text-center mt-10"><strong>Chargement des décisions...</strong></div>;
+    if (error) return <div className="p-4 text-red-500 text-center mt-10"><strong>{error}</strong></div>;
 
     return (
         <div className="h-screen flex flex-col">
             <BasePage />
-
             <div className="flex flex-1 overflow-hidden">
-                {/* Panneau latéral simplifié */}
+                {/* Decisions Panel */}
                 <div className="w-64 border-r flex flex-col">
                     <div className="p-2 border-b flex items-center justify-between">
                         <span className="text-sm">
@@ -201,25 +329,24 @@ const ExtractiveAnnotationPage: React.FC = () => {
                             variant="ghost"
                             size="sm"
                             onClick={handleDeleteSelected}
-                            disabled={Object.values(checkedDecisions).every((v) => !v)}
+                            disabled={!Object.values(checkedDecisions).some(v => v)}
                         >
                             <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
-
                     <ScrollArea className="flex-1 p-2 overflow-auto" ref={scrollAreaRef}>
                         {decisions.map((decision, idx) => (
                             <div
                                 key={decision.id}
                                 className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""
-                                    } ${annotations[decision.id]?.length ? "text-green-600 font-medium" : "text-gray-500"
+                                    } ${annotations[decision.id]?.length > 0 ? "text-green-600 font-medium" : "text-gray-500"
                                     }`}
-                                onClick={() => setSelectedDecision(decision)}
+                                onClick={() => handleDecisionClick(decision)}
                                 ref={(el) => (decisionRefs.current[idx] = el)}
                             >
                                 <Checkbox
-                                    checked={checkedDecisions[decision.id]}
-                                    onCheckedChange={checked =>
+                                    checked={checkedDecisions[decision.id] || false}
+                                    onCheckedChange={(checked) =>
                                         setCheckedDecisions(prev => ({
                                             ...prev,
                                             [decision.id]: !!checked
@@ -228,62 +355,79 @@ const ExtractiveAnnotationPage: React.FC = () => {
                                 />
                                 <p className="break-words">
                                     <strong>{idx + 1}.</strong> {decision.j_juridiction}-{decision.j_ville}-{decision.j_date}-{decision.j_rg}
+                                    {annotations[decision.id]?.length > 0 && (
+                                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                            {annotations[decision.id].length} annotation(s)
+                                        </span>
+                                    )}
                                 </p>
                             </div>
                         ))}
                     </ScrollArea>
                 </div>
 
-                {/* Panneau principal optimisé */}
-                {selectedDecision && (
-                    <Card className="flex-1 flex flex-col m-4">
-                        <CardContent className="flex-1 overflow-auto p-2">
-                            <div className="relative h-full">
-                                {/* Fixed Labels Panel */}
-
-                                <div className="sticky top-0 bg-white z-10 p-2 border-b flex items-center">
-                                    <div >
-                                        <Settings
-                                            className="h-6 w-6 cursor-pointer mr-4"
-                                            onClick={() => setIsDialogOpen(true)}
-                                        />
-
-                                        <LabelsDialog
-                                            open={isDialogOpen}
-                                            onOpenChange={setIsDialogOpen}
-                                            labels={labels}
-                                            setLabels={setLabels}
-                                            datasetId={datasetId}
-                                            datasetSerialNumber={location.state?.datasetSerialNumber}
-                                        />
-                                    </div>
-                                    {/* {<LabelsDialog {...{ row } as LabelsDialogProps<TData>}  />} */}
-                                    <div className="flex space-x-2 overflow-x-auto">
-                                        {labels.map((label, index) => (
-                                            <button
-                                                key={index}
-                                                style={{ backgroundColor: label.color }}
-                                                onClick={() => setCurrentLabel(label)}
-                                                className={`px-3 py-1 rounded border transition-colors duration-200 whitespace-nowrap 
-                                            ${currentLabel && currentLabel.id === label.id ? "border-blue-500 shadow-lg font-bold" : "border-transparent"}`}
-                                            >
-                                                {label.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Decision Text Area with margin to leave space for the fixed panel */}
-                                <div
-                                    className="mt-16 decision-text whitespace-pre-wrap overflow-auto"
-                                    onMouseUp={handleTextSelection}
-                                >
-                                    {selectedDecision.j_texte}
+                {/* Main Panel */}
+                <Card className="flex-1 flex flex-col m-4">
+                    <CardContent className="flex flex-col h-full p-0">
+                        {/* Headers Container */}
+                        <div className="sticky top-0 z-20 bg-white">
+                            {/* Total Annotation Counts */}
+                            <div className="p-2 border-b flex justify-start">
+                                <h3 className="text-lg font-semibold mr-8">Total des annotations</h3>
+                                <div className="flex space-x-4">
+                                    {labels.map((label) => (
+                                        <div key={label.id} className="flex items-center">
+                                            <span className="mr-2" style={{ color: label.color }}>●</span>
+                                            <span>{label.label}: {totalAnnotationCounts[label.id] || 0}</span>
+                                        </div>
+                                    ))}
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                )}
+
+                            {/* Labels and Settings */}
+                            <div className="p-2 border-b flex items-center">
+                                <Settings
+                                    className="h-6 w-6 cursor-pointer mr-4"
+                                    onClick={() => setIsDialogOpen(true)}
+                                />
+                                <LabelsDialog
+                                    open={isDialogOpen}
+                                    onOpenChange={setIsDialogOpen}
+                                    labels={labels}
+                                    setLabels={setLabels}
+                                    datasetId={datasetId}
+                                    datasetSerialNumber={location.state?.datasetSerialNumber}
+                                />
+                                <div className="flex space-x-2 overflow-x-auto">
+                                    {labels.map((label) => (
+                                        <button
+                                            key={label.id}
+                                            style={{ backgroundColor: label.color }}
+                                            onClick={() => setCurrentLabel(label)}
+                                            className={`px-3 py-1 rounded border transition-colors duration-200 whitespace-nowrap ${currentLabel?.id === label.id ? "border-blue-500 shadow-lg font-bold" : "border-transparent"
+                                                }`}
+                                        >
+                                            {label.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Scrollable Decision Text */}
+                        <ScrollArea className="flex-1 p-2">
+                            {selectedDecision ? (
+                                <div
+                                    className="decision-text whitespace-pre-wrap"
+                                    onMouseUp={handleTextSelection}
+                                    dangerouslySetInnerHTML={{ __html: selectedDecision.j_texte || "Aucun texte disponible." }}
+                                />
+                            ) : (
+                                <div className="p-4 text-center">Sélectionnez une décision pour en afficher le texte.</div>
+                            )}
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

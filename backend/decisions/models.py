@@ -43,7 +43,6 @@ class RawDecisionsModel(DecisionsModel):
         return super().save(*args, **kwargs)
     
     
-
 class DatasetsDecisionsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.CASCADE, related_name='dataset_decision')

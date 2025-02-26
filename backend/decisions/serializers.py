@@ -1,4 +1,7 @@
 from rest_framework import serializers
+from django.db.models import Count
+from annotations.models import TextAnnotationsModel
+from annotations.serializers import TextAnnotationsSerializer
 from .models import DatasetsDecisionsModel, RawDecisionsModel
 from re import sub
 from scripts.cleaner_utils import clean_text
@@ -99,4 +102,24 @@ class DatasetsDecisionsSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         return DatasetsDecisionsModel(**validated_data)
+
+# Serializer for DatasetsDecisionsModel with annotations and counts
+class DecisionWithAnnotationsSerializer(serializers.ModelSerializer):
+    raw_decision = RawDecisionsSerializer()
+    annotations = serializers.SerializerMethodField()
+    annotation_counts = serializers.SerializerMethodField()
     
+    class Meta:
+        model = DatasetsDecisionsModel
+        fields = ['id', 'raw_decision', 'annotations', 'annotation_counts']
+    
+    def get_annotations(self, obj):
+        user = self.context['request'].user
+        annotations = TextAnnotationsModel.objects.filter(decision=obj, creator=user, deleted=False)
+        return TextAnnotationsSerializer(annotations, many=True).data
+    
+    def get_annotation_counts(self, obj):
+        user = self.context['request'].user
+        annotations = TextAnnotationsModel.objects.filter(decision=obj, creator=user, deleted=False)
+        counts = annotations.values('label').annotate(count=Count('id'))
+        return {str(item['label']): item['count'] for item in counts}
