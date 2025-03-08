@@ -15,4 +15,19 @@ type AiModel = {
     serialNumber?: string;
 }
 
+export interface AiModelType {
+    id: string;
+    type: string;
+    created_at: string;
+  }
+
+
+export interface TrainingConfig {
+    datasets: string[];
+    modelType: string;
+    splitMethod: 'ratio' | 'kfold';
+    ratios?: { train: number; valid: number; test: number };
+    k?: number;
+  }
+
 export default AiModel;

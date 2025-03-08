@@ -62,15 +62,30 @@ class PromptsModel(models.Model):
         ordering = ['serial_number']
         indexes = [ models.Index(fields=['prompt'])]
 
+class AiModelTypesModel(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid4)
+    type = models.CharField(max_length=255, blank=False, null=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='model_types_creator')
+    deleted = models.BooleanField(default=False)
+    objects = models.Manager()
+
+    class Meta:
+        db_table = "model_types"
+        ordering = ['type']
+        indexes = [ models.Index(fields=['type',])]
+        
 class AiModelTrainingsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     model = models.ForeignKey('Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='training_model')
+    type = models.ForeignKey('AiModelTypesModel', on_delete=models.DO_NOTHING, related_name='training_type')
     # prompt = models.ForeignKey('PromptsModel', on_delete=models.DO_NOTHING, related_name='training_prompt')
     dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='training_dataset')
     training_status = models.CharField(max_length=255, blank=False, null=False, default="pending")
     training_result = models.JSONField(blank=True, null=True, default=None)
     training_log = models.TextField(blank=True, null=True, default="", max_length=32_768)
-    
+    training_parameters = models.JSONField(blank=True, null=True, default=None)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='trainings_creator')
@@ -81,3 +96,4 @@ class AiModelTrainingsModel(models.Model):
         db_table = "model_trainings"
         ordering = ['model', ]
         indexes = [ models.Index(fields=['model', ])]
+        
