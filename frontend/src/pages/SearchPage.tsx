@@ -11,7 +11,7 @@ import {
 import { useToast } from "@/components/ui/use-toast";
 // import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { fetchCategories, fetchVilles, search, groupedSearch, logCollection, associerDecisions } from "@/services/SearchServices"
+import { fetchCategories, fetchVilles,  groupedSearch, associerDecisions } from "@/services/SearchServices"
 import { Categorie } from "@/@types/categorie";
 import { Dataset } from "@/@types/dataset";
 import { Button } from "@/components/ui/button";

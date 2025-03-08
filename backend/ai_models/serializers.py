@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ai_ModelsModel, PromptsModel
+from .models import Ai_ModelsModel, PromptsModel, AiModelTypesModel
 from categories.models import CategoriesModel
 
 class AiModelSerializer(serializers.ModelSerializer):
@@ -59,3 +59,14 @@ class PromptSerializer(serializers.ModelSerializer):
     
     def save(self, **kwargs):
         return super().save(**kwargs)
+    
+class AiModelTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiModelTypesModel
+        fields = ['id', 'type', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['created_at'] = instance.created_at.strftime("%Y-%m-%d %H:%M")
+        return data

@@ -1,4 +1,4 @@
-import AiModel  from "@/@types/ai-model";
+import AiModel, { AiModelType }  from "@/@types/ai-model";
 import axios from "axios";
 
 
@@ -95,4 +95,21 @@ const deleteAiModel = async (model: AiModel) => {
   }
 };
 
-export {fetchAiModels, createAiModel, editAiModel, deleteAiModel };
+const fetchAiModelTypes = async (): Promise<AiModelType[] | undefined> => {
+  try {
+    const token = sessionStorage.getItem("token");
+    const response = await axios.get(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/model-types/`,
+      {
+        headers: { Authorization: `${token}` },
+        withCredentials: true
+      }
+    );
+    console.log(` model types: ${response.data}`);
+    return response.data as AiModelType[];
+  } catch (error) {
+    console.error("Error fetching model types:", error);
+    return undefined;
+  }
+};
+export {fetchAiModels, createAiModel, editAiModel, deleteAiModel, fetchAiModelTypes };

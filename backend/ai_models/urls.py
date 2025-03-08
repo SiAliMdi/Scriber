@@ -5,6 +5,11 @@ from . import apis
 app_name = "ai_models"
 
 urlpatterns = [
+    path(
+        'model-types/', 
+        apis.AiModelTypesListView.as_view(), 
+        name='model-types-list'
+    ),
     # create a new ai_model 
     path("prompts/new/", apis.PromptsApi.as_view(), name="create_ai_model"),
     path("new/", apis.AiModel.as_view(), name="create_ai_model"),
