@@ -1,4 +1,4 @@
-from celery import shared_task
+# from celery import shared_task
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -10,7 +10,7 @@ environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
 django_setup()
 from scripts.judilibre import export_ca_decisions
 
-@shared_task
+# @shared_task
 def export_ca_decisions_daily_task():
     end_date = datetime.today().strftime('%Y-%m-%d')
     start_date = (datetime.today() - timedelta(weeks=5)).strftime('%Y-%m-%d')    

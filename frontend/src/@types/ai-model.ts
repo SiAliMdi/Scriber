@@ -23,6 +23,7 @@ export interface AiModelType {
 
 
 export interface TrainingConfig {
+    modelId: string;
     datasets: string[];
     modelType: string;
     splitMethod: 'ratio' | 'kfold';

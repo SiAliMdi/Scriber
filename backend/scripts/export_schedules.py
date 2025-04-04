@@ -1,17 +1,17 @@
-import schedule
-import time
-from django import setup as django_setup
-from pathlib import Path
+import os
 import sys
-from os import environ
-BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(BASE_DIR))
-environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-django_setup()
-environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+
+# Get the project base directory (one level up from scripts folder)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(BASE_DIR)
+
+# Set the Django settings module
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
+
+# Optionally, initialize Django
+import django
+django.setup()
 from decisions.tasks import export_ca_decisions_daily_task
 
-
-while True:
-    export_ca_decisions_daily_task()
-    time.sleep(3600 * 24)
+export_ca_decisions_daily_task()
+print('Exported CA decisions')

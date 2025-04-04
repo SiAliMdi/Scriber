@@ -1,4 +1,8 @@
+import os
+from pathlib import Path
 from rest_framework import views, permissions, response, status
+from sklearn.utils import compute_class_weight
+from annotations.models import BinaryAnnotationsModel
 from categories.serializers import CategoriesSerializer
 from users.serializers import UserSerializer
 from .serializers import  AiModelSerializer, AiModelTypeSerializer, PromptSerializer
@@ -9,8 +13,9 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 
-# scikit-learn imports
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.metrics import accuracy_score
@@ -36,13 +41,26 @@ class AiModels(views.APIView):
         else:
             if not category_id:
                 return response.Response(data={"error": "Category id is required"}, status=400)
-            ai_models = Ai_ModelsModel.objects.filter(deleted=False)
+            ai_models = Ai_ModelsModel.objects.filter(deleted=False, category=category_id)
             ai_models = AiModelSerializer(ai_models, many=True).data
             return response.Response(data=ai_models, status=200)
             
 class AiModel(views.APIView):
     authentication_classes = (services.ScriberUserAuthentication,)
     permission_classes = (permissions.IsAuthenticated,)
+    
+    def get(self, request, model_id):
+        if not request.user.is_authenticated:
+            return response.Response(data={"error": "Unauthorized"}, status=401)
+        else:
+            if not model_id:
+                return response.Response(data={"error": "Model id is required"}, status=400)
+            try:
+                model = Ai_ModelsModel.objects.get(pk=model_id)
+            except Ai_ModelsModel.DoesNotExist:
+                print("Model not found")
+            model = AiModelSerializer(model).data
+            return response.Response(data=model, status=200)
     
     def patch(self, request, model_id):
         if not request.user.is_authenticated:
@@ -216,6 +234,7 @@ class TrainModelAPIView(APIView):
     def post(self, request):
         user = request.user  # assumes an authenticated user
         model_name = request.data.get("model_name")
+        model_id = request.data.get("model_id")
         dataset_ids = request.data.get("datasets", [])
         split_method = request.data.get("splitMethod")
         ratios = request.data.get("ratios", None)
@@ -239,21 +258,20 @@ class TrainModelAPIView(APIView):
             except Exception:
                 return Response({"error": "Invalid k value."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Combine decisions from all selected datasets
         decisions_qs = DatasetsDecisionsModel.objects.filter(dataset__id__in=dataset_ids, deleted=False).select_related("raw_decision")
         if not decisions_qs.exists():
             return Response({"error": "No decisions found for the selected datasets."}, status=status.HTTP_404_NOT_FOUND)
         
         decision_texts = []
         labels = []
-        # For each decision, get the text (using 'texte_net') and determine label from binary annotations.
         for ds_decision in decisions_qs:
             text = ds_decision.raw_decision.texte_net
-            # Assume that if any annotation’s label (string) equals "positive" (case-insensitive) then label = 1; else 0.
-            annotations = ds_decision.binary_annotations_decision.all()
-            if not annotations.exists():
+            try:
+                annotation = BinaryAnnotationsModel.objects.get(decision=ds_decision, creator=user)
+            except BinaryAnnotationsModel.DoesNotExist:
                 continue
-            label = 1 if any(a.label.label.lower() == "positive" for a in annotations) else 0
+            
+            label = int(annotation.label.label)
             decision_texts.append(text)
             labels.append(label)
         
@@ -261,15 +279,11 @@ class TrainModelAPIView(APIView):
             return Response({"error": "No decision texts found with annotations."}, status=status.HTTP_404_NOT_FOUND)
 
         # Create a record for the model and training (status pending)
-        ai_model = Ai_ModelsModel.objects.create(
-            name=model_name,
-            creator=user,
-            model_type="classification",
-            description="Training model for binary classification"
-        )
+        datasets = [ds_decision.dataset for ds_decision in decisions_qs]
+        ai_model = get_object_or_404(Ai_ModelsModel, pk=model_id)
         training_record = AiModelTrainingsModel.objects.create(
             model=ai_model,
-            dataset=decisions_qs.first().dataset,  # if multiple, you might create a merged dataset record
+            dataset= datasets,  
             training_status="pending",
             training_parameters=json.dumps(request.data),
             creator=user
@@ -288,60 +302,94 @@ class TrainModelAPIView(APIView):
         }, status=status.HTTP_200_OK)
 
     def run_training(self, training_id, texts, labels, model_name, split_method, ratios, k_value):
-        # Retrieve the training record (do not pass ORM objects directly to threads)
         training_record = AiModelTrainingsModel.objects.get(id=training_id)
         try:
-            # Vectorize decision texts using TF-IDF
+            # --------- TRAINING PIPELINE (adapted from the standalone script) ---------
+            # 1. Vectorize decision texts using TF-IDF (you may add parameters as needed)
             vectorizer = TfidfVectorizer()
             X = vectorizer.fit_transform(texts)
             y = labels
 
-            # Get the classifier class and instantiate it
+            # 2. Compute class weights if necessary (for unbalanced data)
+            import numpy as np
+            classes = np.unique(y)
+            weights = compute_class_weight(class_weight="balanced", classes=classes, y=y)
+            class_weight = {classes[i]: weights[i] for i in range(len(classes))}
+
+            # 3. Instantiate the classifier
             clf_class = CLASSIFIER_MAP[model_name]
             if model_name == "VotingClassifier":
-                # For VotingClassifier, define some base estimators (customize as needed)
+                # For VotingClassifier, define base estimators (customize as needed)
                 base_estimators = [
-                    ("lr", LogisticRegression()),
-                    ("dt", DecisionTreeClassifier())
+                    ("lr", LogisticRegression(class_weight=class_weight)),
+                    ("dt", DecisionTreeClassifier(class_weight=class_weight))
                 ]
                 clf = clf_class(estimators=base_estimators)
             else:
-                clf = clf_class()
+                # You can pass class_weight if supported by the classifier
+                if model_name in ["LogisticRegression", "SVC", "DecisionTreeClassifier", "RandomForestClassifier"]:
+                    clf = clf_class(class_weight=class_weight)
+                else:
+                    clf = clf_class()
 
+            # 4. Split the data and train the model
             if split_method == "ratio":
                 train_ratio = ratios.get("train") / 100.0
-                X_train, X_temp, y_train, _ = train_test_split(X, y, test_size=1 - train_ratio, random_state=42)
+                X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1 - train_ratio, random_state=42)
                 clf.fit(X_train, y_train)
                 y_pred = clf.predict(X_train)
                 acc = accuracy_score(y_train, y_pred)
-                splits_info = {"train_size": X_train.shape[0], "accuracy": acc}
+                acc_test = accuracy_score(y_test, clf.predict(X_test))
+                splits_info = {"train_size": X_train.shape[0], "accuracy_train": acc,  "test_size": X_test.shape[0], "accuracy_test": acc_test}
             else:
                 scores = cross_val_score(clf, X, y, cv=k_value)
                 acc = scores.mean()
-                clf.fit(X, y)  # fit on the full dataset after cross-validation
+                clf.fit(X, y)  # Fit on full data after cross-validation
                 splits_info = {"k_folds": k_value, "accuracy": acc, "scores": scores.tolist()}
 
-            # Simulate saving the trained model (e.g. using pickle or joblib in production)
-            model_file_path = f"models/{training_record.model.id}/{model_name}_trained.pkl"
-            # For example:
-            # import joblib
-            # joblib.dump(clf, model_file_path)
+            # 5. Save the trained model (simulate saving using pickle or joblib)
+            model_dir = f"models/{training_record.model.id}"
+            Path(model_dir).mkdir(parents=True, exist_ok=True)
+            model_file_path = os.path.join(model_dir, f"{model_name}_trained.pkl")
+            import joblib
+            joblib.dump(clf, model_file_path)
 
-            # Update training record with results
+            # 6. Update training record with results
             training_record.training_status = "finished"
-            training_record.training_result = {"accuracy": acc, "splits_info": splits_info}
+            training_record.training_result = {"accuracy": acc  if split_method != "ratio" else acc_test
+                                               , "splits_info": splits_info}
             training_record.training_log = "Training completed successfully."
             training_record.save()
 
-            # Update the AI model record with the (simulated) model path
+            # Update the AI model record with the model file path
             ai_model = training_record.model
             ai_model.model_path = model_file_path
             ai_model.save()
 
-            # Optionally, trigger a websocket or push notification to alert the user that training is finished.
-            # notify_user(training_record.creator, training_record.id, "finished")
+            # --------- SEND WEBSOCKET NOTIFICATION ---------
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{training_record.creator.id}",
+                {
+                    "type": "training_notification",
+                    "training_id": str(training_record.id),
+                    "status": "finished",
+                    "result": {"accuracy": acc, "splits_info": splits_info}
+                }
+            )
 
         except Exception as e:
             training_record.training_status = "failed"
             training_record.training_log = str(e)
             training_record.save()
+            # Send failure notification
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{training_record.creator.id}",
+                {
+                    "type": "training_notification",
+                    "training_id": str(training_record.id),
+                    "status": "failed",
+                    "result": {"error": str(e)}
+                }
+            )

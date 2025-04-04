@@ -15,6 +15,8 @@ from typing import List
 # from django.db.models import Count
 import logging
 from logging.handlers import TimedRotatingFileHandler
+from logging import FileHandler
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(BASE_DIR))
@@ -56,12 +58,13 @@ def setup_logger(logger_name: str = "ExportLogger"):
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     log_filename = join(log_dir, f"{day}.log")
     
-    handler = TimedRotatingFileHandler(
+    """ handler = TimedRotatingFileHandler(
         filename=log_filename,
         when="midnight",
         encoding="utf-8"
-    )
-    handler.suffix = "%Y-%m-%d"
+    ) """
+    handler = FileHandler(log_filename)
+    # handler.suffix = "%Y-%m-%d"
     handler.level = logging.INFO
     
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')

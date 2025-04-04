@@ -81,7 +81,7 @@ class AiModelTrainingsModel(models.Model):
     model = models.ForeignKey('Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='training_model')
     type = models.ForeignKey('AiModelTypesModel', on_delete=models.DO_NOTHING, related_name='training_type')
     # prompt = models.ForeignKey('PromptsModel', on_delete=models.DO_NOTHING, related_name='training_prompt')
-    dataset = models.ForeignKey('datasets.DatasetsModel', on_delete=models.DO_NOTHING, related_name='training_dataset')
+    datasets = models.ManyToManyField('datasets.DatasetsModel', related_name='training_dataset', blank=True)
     training_status = models.CharField(max_length=255, blank=False, null=False, default="pending")
     training_result = models.JSONField(blank=True, null=True, default=None)
     training_log = models.TextField(blank=True, null=True, default="", max_length=32_768)
