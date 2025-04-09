@@ -3,6 +3,14 @@ from .models import Ai_ModelsModel, PromptsModel, AiModelTypesModel
 from categories.models import CategoriesModel
 
 class AiModelSerializer(serializers.ModelSerializer):
+    type = serializers.SlugRelatedField(
+        slug_field='type',
+        queryset=AiModelTypesModel.objects.filter(deleted=False),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
+
     class Meta:
         model = Ai_ModelsModel
         fields = '__all__'
@@ -13,6 +21,14 @@ class AiModelSerializer(serializers.ModelSerializer):
     def to_internal_value(self, data):
         data['model_type'] = data.get('modelType')
         del data['modelType']
+        if 'type' in data :             
+            try:
+                data['type'] = AiModelTypesModel.objects.get(type=data['type'])
+            except AiModelTypesModel.DoesNotExist:
+                data['type'] = None
+                raise serializers.ValidationError({"type": "Invalid type value."})
+        else:
+            data['type'] = None
         return data
     
     def update(self, instance, validated_data):

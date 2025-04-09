@@ -31,6 +31,7 @@ class Ai_ModelsModel(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     model_path = models.FileField(upload_to='models/' + str(id) + '/' + str(name) + '/' + str(created_at) + '/', blank=False, null=False)
     model_type = models.CharField(max_length=255, blank=True, null=True)
+    type = models.ForeignKey('AiModelTypesModel', on_delete=models.DO_NOTHING, related_name='ai_models_type', blank=True, null=True)
     category = models.ForeignKey('categories.CategoriesModel', on_delete=models.DO_NOTHING, related_name='ai_models_category', blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='ai_models_creator')

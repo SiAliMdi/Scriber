@@ -12,11 +12,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Row } from "@tanstack/react-table"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
-import { editAiModel } from "@/services/AiModelsServices";
+import { editAiModel, fetchAiModelTypes } from "@/services/AiModelsServices";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
+import { AiModelType } from "@/@types/ai-model"
+import { set } from "lodash"
 
 interface EditDialogProps<TData> {
     row: Row<TData>;
@@ -30,13 +32,26 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
     const [description, setDescription] = useState(row.original.description);
     const [modelType, setmodelType] = useState(row.original.modelType);
     const { toast } = useToast();
+    const [aiModelType, setaiModelType] = useState("");
+    const [aimodelTypes, setaiModelTypes] = useState<AiModelType[]>([]);
 
+    useEffect(() => {
+        fetchAiModelTypes().then(data =>
+        {
+            setaiModelTypes(data);
+            if (data.length > 0) {
+                setaiModelType(data[0].type);
+            }
+        }
+        );
+    }, []);
     const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         event.preventDefault();
         const model = cloneDeep(row.original);
         model.name = name;
         model.description = description;
         model.modelType = modelType;
+        model.type = aiModelType;
         onEdit(model);
 
         editAiModel(model).then((response) => {
@@ -104,7 +119,7 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
 
                             <div className="grid grid-cols-10 items-center gap-4 w-full px-0 mx-0 space-y-2">
                                 <Label htmlFor="description" className="flex items-center justify-center  col-span-1">
-                                    Type de modèle
+                                    Catégorie du modèle
                                 </Label>
                                 <div className="flex items-center space-x-2 justify-center  col-span-3">
 
@@ -123,6 +138,26 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
                                 </div>
                             </div>
                         </RadioGroup>
+                        {modelType !== "extractif" && (
+                            <div>
+                            <Label htmlFor="modelType">Type de modèle</Label>
+                            <select
+                                id="modelType"
+                                value={aiModelType}
+                                onChange={e => setaiModelType(e.target.value)}
+                                
+                                className="col-span-4 fill-border bg-white text-gray-900 border rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500"
+                            >
+                                {aimodelTypes.map((type) => (
+                                    <option key={type.id} value={type.type}>
+                                        {type.type}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                            
+                            )}
+
                     </div>
                     <DialogFooter>
                         <Button type="submit" onClick={handleSave}>Enregistrer les modifications</Button>

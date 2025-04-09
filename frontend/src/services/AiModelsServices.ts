@@ -25,6 +25,7 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
                 updatedAt: model.updated_at,
                 category: model.category,
                 modelType: model.model_type,
+                type: model.type,
                 modelPath: model.model_path,
                 creator: model.creator,
                 deleted: model.deleted,
