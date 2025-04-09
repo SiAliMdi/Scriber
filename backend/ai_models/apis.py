@@ -44,6 +44,14 @@ class AiModels(views.APIView):
             ai_models = Ai_ModelsModel.objects.filter(deleted=False, category=category_id)
             ai_models = AiModelSerializer(ai_models, many=True).data
             return response.Response(data=ai_models, status=200)
+
+    def post(self, request):
+        data = request.data
+        serializer = AiModelSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save(creator=request.user)
+            return response.Response(serializer.data, status=201)
+        return response.Response(serializer.errors, status=400)
             
 class AiModel(views.APIView):
     authentication_classes = (services.ScriberUserAuthentication,)
@@ -75,12 +83,11 @@ class AiModel(views.APIView):
                 model = Ai_ModelsModel.objects.get(pk=model_id)
             except Ai_ModelsModel.DoesNotExist:
                 print("Model not found")
+            
             serializer = AiModelSerializer(model, data=data, partial=True)
             if serializer.is_valid():
-                serialized_data = serializer.validated_data
-                serializer.update(instance=model, validated_data=serialized_data)
-                serialized_data['creator'] = UserSerializer(serialized_data['creator']).data
-                serialized_data['category'] = CategoriesSerializer(serialized_data['category']).data
+                updated_model = serializer.save()
+                serialized_data = AiModelSerializer(updated_model).data
                 return response.Response(data=serialized_data, status=200)
             else:
                 return response.Response(data=serializer.errors, status=400)

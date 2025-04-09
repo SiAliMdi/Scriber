@@ -48,13 +48,23 @@ const ReadDialog = <TData,>({ row }: ReadDialogProps<TData>) => {
                     </div>
                     <div  className="grid grid-cols-10 items-center gap-4 w-full px-0 mx-0">
                         <Label htmlFor="description" className="flex items-center justify-center  col-span-1">
-                            Type de modèle
+                            Catégorie du modèle
                         </Label>
                         <Input readOnly={true}
                             value={row.original.modelType}
                             id="modelType"
                             defaultValue={row.original.modelType}  className="col-span-9"/>
                     </div>
+                    <div className="grid grid-cols-10 items-center gap-4 w-full px-0 mx-0">
+                        <Label htmlFor="description" className="flex items-center justify-center  col-span-1">
+                            Type de modèle
+                        </Label>
+                        <Input readOnly={true}
+                            value={row.original.type}
+                            id="type"
+                            defaultValue={row.original.type}  className="col-span-9"/>
+                            </div>
+
                 </div>
             </DialogContent>
         </Dialog>

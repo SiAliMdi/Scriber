@@ -9,6 +9,7 @@ type AiModel = {
     updatedAt?: Date;
     category: string;
     modelType?: string;
+    type?: string;
     modelPath?: string;
     creator?: string;
     deleted?: boolean;
