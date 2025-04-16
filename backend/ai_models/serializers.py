@@ -89,3 +89,11 @@ class AiModelTypeSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data['created_at'] = instance.created_at.strftime("%Y-%m-%d %H:%M")
         return data
+
+
+from .models import AiModelTrainingsModel
+
+class AiModelTrainingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AiModelTrainingsModel
+        fields = ['id', 'training_status', 'training_result', 'updated_at']

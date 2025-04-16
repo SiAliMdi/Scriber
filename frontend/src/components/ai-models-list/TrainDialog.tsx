@@ -130,7 +130,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
 
     ws.onmessage = (event: MessageEvent) => {
       const data: TrainingNotification = JSON.parse(event.data);
-      toast({ title: "Notification d'entraînement", description: `Data received ${data.message}` });
+      toast({ title: "Notification d'entraînement", description: `Données bien reçues ${data.message}` });
     };
 
     ws.onclose = () => {

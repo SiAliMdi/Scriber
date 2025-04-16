@@ -5,7 +5,7 @@ from sklearn.utils import compute_class_weight
 from annotations.models import BinaryAnnotationsModel
 from categories.serializers import CategoriesSerializer
 from users.serializers import UserSerializer
-from .serializers import  AiModelSerializer, AiModelTypeSerializer, PromptSerializer
+from .serializers import  AiModelSerializer, AiModelTrainingSerializer, AiModelTypeSerializer, PromptSerializer
 from .models import Ai_ModelsModel, AiModelTypesModel, PromptsModel, AiModelTrainingsModel
 from users import services
 import threading, json
@@ -414,3 +414,23 @@ class TrainModelAPIView(APIView):
                     "result": {"error": str(e)}
                 }
             )
+
+class AiModelTrainingsAPIView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, model_id):
+        if not request.user.is_authenticated:
+            return response.Response(data={"error": "Unauthorized"}, status=401)
+        try:
+            model = get_object_or_404(Ai_ModelsModel, pk=model_id)
+            print('model_id', model_id)
+            trainings = AiModelTrainingsModel.objects.filter(
+                model_id=model#, training_status__exclude="error"
+            ).exclude(training_status="deleted").exclude(training_status="error")
+            print('model_id 2', model_id)
+            serializer = AiModelTrainingSerializer(trainings, many=True)
+            return response.Response(serializer.data, status=200)
+        except Exception as e:
+            print(e.with_traceback())
+            return response.Response({"error": str(e)}, status=500)

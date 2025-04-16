@@ -63,7 +63,6 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
 
     async def receive(self, text_data=None, bytes_data=None):
         text_data_loaded = json.loads(text_data)
-        print("Received data:", text_data_loaded)
         model_id = text_data_loaded.get("modelId", None)
         # model_type = text_data_loaded["modelType"]
         datasets = text_data_loaded["datasets"]
@@ -74,29 +73,28 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
         # Get the user asynchronously
         user = await self.get_user(self.scope["user"].id)
         if not user:
-            await self.send_error("User not found")
+            await self.send_error("Utilisateur non trouvé")
             return
 
         # Get the model asynchronously
         model = await self.get_model(model_id)
         if not model:
-            await self.send_error("Model not found")
+            await self.send_error("Modèle non trouvé")
             return
 
         if not datasets:
-            await self.send_error("No datasets selected")
+            await self.send_error("Datasets non trouvés")
             return
 
         if split_method == "ratios":
             if not ratios or sum(ratios.values()) != 100:
-                await self.send_error("Invalid ratios")
+                await self.send_error("Ratios non valides")
                 return
 
         # Fetch decisions and annotations asynchronously
         decision_texts, labels = await self.get_decision_texts_and_labels(datasets, user)
-        print("Decision texts:", )
         if not decision_texts:
-            await self.send_error("No valid decisions found in the selected datasets")
+            await self.send_error("Aucune décision trouvée")
             return
 
         datasets = await self.get_decisions_datasets(datasets)
@@ -109,11 +107,8 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             target=self.run_training,
             args=(training_record.id, decision_texts, labels, model_type.type, split_method, ratios, k_folds)
         )
-        print("Starting training thread")
         thread.start()
-
-        await self.send_success("Training started")
-        print("Training started")
+        await self.send_success("Entraînement en cours")
         
     async def send_error(self, message):
         await self.send(text_data=json.dumps({"error": message}))
@@ -173,9 +168,13 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
         ai_model = Ai_ModelsModel.objects.get(pk=model_id)
         training_item = AiModelTrainingsModel.objects.create(
             model=ai_model,
-            training_status="pending",
+            training_status="attente",
             type=model_type,
-            training_parameters=json.dumps({"splitMethod": split_method, "ratios": ratios, "k_folds": k_folds}),
+            training_parameters=json.dumps({"méthode_de_split": split_method, 
+                                            "ratios": ratios, 
+                                            "k_folds": k_folds,
+                                            "model_type": model_type.type,
+                                            }),
             creator=user
         )
         training_item.datasets.set(datasets)
@@ -225,27 +224,38 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
                 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=1 - train_ratio, random_state=42)
                 clf.fit(X_train, y_train)
                 acc = accuracy_score(y_train, clf.predict(X_train))
+                acc = round(acc, 4)
                 acc_test = accuracy_score(y_test, clf.predict(X_test))
-                splits_info = {"train_size": X_train.shape[0], "accuracy_train": acc, "test_size": X_test.shape[0], "accuracy_test": acc_test}
-                print("test finish")
+                acc_test = round(acc_test, 4)
+                splits_info = {
+                    "type_modèle": model_name,
+                    "taille_train":
+                    X_train.shape[0],
+                    "taille_test": X_test.shape[0],
+                    "accuracy_train": acc,  "accuracy_test": acc_test}
             else:
                 scores = cross_val_score(clf, X, y, cv=k_value)
+                scores = np.round(scores, 4)
                 acc = scores.mean()
-                splits_info = {"k_folds": k_value, "accuracy": acc, "scores": scores.tolist()}
+                taille_fold = X.shape[0] // k_value
+                splits_info = {"type_modèle": model_name,
+                                "k_folds": k_value,
+                               "taille_folds_train": X.shape[0] - taille_fold,
+                               "taille_fold_valid": taille_fold,
+                               "accuracy_moy": acc, "scores_valid": scores.tolist()}
 
             model_dir = f"models/{training_record.model.id}/{str(training_record.id)}/"
             Path(model_dir).mkdir(parents=True, exist_ok=True)
             model_file_path = os.path.join(model_dir, f"{model_name}_trained.pkl")
             joblib.dump(clf, model_file_path)
-            training_record.training_status = "finished"
-            training_record.training_result = {"accuracy": acc if split_method != "ratio" else acc_test, "splits_info": splits_info}
+            training_record.training_status = "entraîné"
+            # training_record.training_result = {"accuracy": acc if split_method != "ratio" else acc_test, "splits_info": splits_info}
+            training_record.training_result = splits_info
         except Exception as e:
-            print(f"Training error: {e.with_traceback()}")
-            training_record.training_status = "error"
-            training_record.training_log = f"Training failed: {str(e)}"
+            training_record.training_status = "erreur"
+            training_record.training_log = f" Erreur lors de l'entraînement du modèle : {str(e)}"
         finally:
             training_record.save()
-        print("Training finished")
         self.channel_layer.group_send(
             f"user_{training_record.creator.id}_training_{training_record.id}",
             {"type": "training_notification", "result": training_record.training_result}

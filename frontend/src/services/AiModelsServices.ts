@@ -1,5 +1,6 @@
 import AiModel, { AiModelType }  from "@/@types/ai-model";
 import axios from "axios";
+import { Training } from "@/@types/ai-model";
 
 
 const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<React.SetStateAction<AiModel[]>>) => {
@@ -144,5 +145,21 @@ const fetchAiModelTypes = async (): Promise<AiModelType[] | undefined> => {
   }
 };
 
+const fetchTrainings = async (modelId: string): Promise<Training[] | undefined> => {
+  try {
+    const token = sessionStorage.getItem("token");
+    const response = await axios.get(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/trainings/${modelId}/`,
+      {
+        headers: { Authorization: `${token}` },
+        withCredentials: true,
+      }
+    );
+    return response.data as Training[];
+  } catch (error) {
+    console.error("Error fetching trainings:", error);
+    return undefined;
+  }
+};
 
-export {fetchAiModels, fetchAiModel, createAiModel, editAiModel, deleteAiModel, fetchAiModelTypes };
+export {fetchAiModels, fetchAiModel, createAiModel, editAiModel, deleteAiModel, fetchAiModelTypes, fetchTrainings };

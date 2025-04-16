@@ -32,4 +32,10 @@ export interface TrainingConfig {
     k?: number;
   }
 
+export interface Training {
+    id: string;
+    training_status: string;
+    training_result: object;
+    updated_at: string;
+}
 export default AiModel;
