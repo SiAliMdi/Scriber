@@ -12,10 +12,12 @@ import EditDialog, { EditDialogProps } from './EditDialog';
 import ReadDialog, { ReadDialogProps } from './AiModelDialog';
 import TrainDialog from './TrainDialog';
 import { Dataset } from '@/@types/dataset';
-import { Categorie } from '@/@types/categorie';
+// import { Categorie } from '@/@types/categorie';
 import { useEffect, useState } from 'react';
-import { TrainingConfig } from '@/@types/ai-model';
-import { fetchCategories } from "@/services/SearchServices"
+import AiModel, { TrainingConfig } from '@/@types/ai-model';
+// import { fetchCategories } from "@/services/SearchServices"
+import { fetchAiModel } from '@/services/AiModelsServices';
+import { fetchDatasets } from '@/services/DatasetsServices';
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
   setAiModels: (value: TData[]) => void;
@@ -26,10 +28,15 @@ interface DataTableRowActionsProps<TData> {
 
 
 const DataTableRowActions = <TData,>({ row, setAiModels, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
-  const [categoriesDatasets, setCategoriesDatasets] = useState<Map<Categorie, Dataset[]>>(new Map<Categorie, Dataset[]>());
-
+  // const [categoriesDatasets, setCategoriesDatasets] = useState<Map<Categorie, Dataset[]>>(new Map<Categorie, Dataset[]>());
+  const [model, setModel] = useState< AiModel | undefined>(undefined);
+  const [datasets, setDatasets] = useState<Dataset[]>([]);
   useEffect(() => {
-    fetchCategories(setCategoriesDatasets);
+    // fetchCategories(setCategoriesDatasets);
+    fetchAiModel(row.original.id).then((m) => {
+      setModel (m);
+      fetchDatasets(m?.category.split(" - ")[0], setDatasets);    
+    });
   }, [])
   
   return (
@@ -46,14 +53,17 @@ const DataTableRowActions = <TData,>({ row, setAiModels, onEdit, onDelete }: Dat
           <ReadDialog {...{ row } as ReadDialogProps<TData>} />
           <EditDialog {...{ row, onEdit, setAiModels, } as EditDialogProps<TData>} />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          {row.original.modelType != "extractif" && <TrainDialog
+          {/* <DropdownMenuSeparator /> */}
+          { model?.modelType != "extractif" && <TrainDialog
           row={row}
-          categoriesDatasets={categoriesDatasets}
-          onTrainStart={(config: TrainingConfig
+          // filter dataset of the current model's category
+          datasets={ datasets }
+            //categoriesDatasets.get(model?.category.id) || []}
+          // categoriesDatasets={categoriesDatasets}
+          /* onTrainStart={(config: TrainingConfig
           ) => {
             console.log("Training started", config);
-          }}
+          }} */
 
           />}
         </DropdownMenuContent>

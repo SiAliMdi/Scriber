@@ -1,5 +1,6 @@
 import AiModel, { AiModelType }  from "@/@types/ai-model";
 import axios from "axios";
+import { Training } from "@/@types/ai-model";
 
 
 const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<React.SetStateAction<AiModel[]>>) => {
@@ -25,6 +26,7 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
                 updatedAt: model.updated_at,
                 category: model.category,
                 modelType: model.model_type,
+                type: model.type,
                 modelPath: model.model_path,
                 creator: model.creator,
                 deleted: model.deleted,
@@ -39,6 +41,37 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
       console.log(error);
     });
 }
+
+const fetchAiModel = async (id: number): Promise<AiModel | undefined> => {
+  try {
+    const token = sessionStorage.getItem("token");
+    const response = await axios.get(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/1/${id}/`,
+      {
+        headers: { Authorization: `${token}` },
+        withCredentials: true
+      }
+    );
+    const model = response.data as AiModel;
+    return {
+      id: model.id,
+      name: model.name,
+      description: model.description,
+      createdAt: model.created_at,
+      updatedAt: model.updated_at,
+      category: model.category,
+      modelType: model.model_type,
+      modelPath: model.model_path,
+      creator: model.creator,
+      deleted: model.deleted,
+      serialNumber: model.serial_number,
+
+  };
+  } catch (error) {
+    console.error("Error fetching model:", error);
+    return undefined;
+  }
+};
 
 const createAiModel = async (dataset: AiModel) => {
   try {
@@ -105,11 +138,28 @@ const fetchAiModelTypes = async (): Promise<AiModelType[] | undefined> => {
         withCredentials: true
       }
     );
-    console.log(` model types: ${response.data}`);
     return response.data as AiModelType[];
   } catch (error) {
     console.error("Error fetching model types:", error);
     return undefined;
   }
 };
-export {fetchAiModels, createAiModel, editAiModel, deleteAiModel, fetchAiModelTypes };
+
+const fetchTrainings = async (modelId: string): Promise<Training[] | undefined> => {
+  try {
+    const token = sessionStorage.getItem("token");
+    const response = await axios.get(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/trainings/${modelId}/`,
+      {
+        headers: { Authorization: `${token}` },
+        withCredentials: true,
+      }
+    );
+    return response.data as Training[];
+  } catch (error) {
+    console.error("Error fetching trainings:", error);
+    return undefined;
+  }
+};
+
+export {fetchAiModels, fetchAiModel, createAiModel, editAiModel, deleteAiModel, fetchAiModelTypes, fetchTrainings };

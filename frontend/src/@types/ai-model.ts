@@ -9,6 +9,7 @@ type AiModel = {
     updatedAt?: Date;
     category: string;
     modelType?: string;
+    type?: string;
     modelPath?: string;
     creator?: string;
     deleted?: boolean;
@@ -23,11 +24,18 @@ export interface AiModelType {
 
 
 export interface TrainingConfig {
+    modelId: string;
     datasets: string[];
-    modelType: string;
+    // modelType: string;
     splitMethod: 'ratio' | 'kfold';
     ratios?: { train: number; valid: number; test: number };
     k?: number;
   }
 
+export interface Training {
+    id: string;
+    training_status: string;
+    training_result: object;
+    updated_at: string;
+}
 export default AiModel;

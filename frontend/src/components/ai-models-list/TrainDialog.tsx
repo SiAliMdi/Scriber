@@ -18,30 +18,43 @@ import { Dataset } from "@/@types/dataset";
 import { Categorie } from "@/@types/categorie";
 import { AiModelType, TrainingConfig } from "@/@types/ai-model";
 import { fetchAiModelTypes } from "@/services/AiModelsServices";
-
+import {v4 as uuidv4} from 'uuid';
 
 interface TrainingDialogProps<TData> {
   row: Row<TData>;
-  categoriesDatasets: Map<Categorie, Dataset[]>;
-  onTrainStart: (config: TrainingConfig) => void;
+  // categoriesDatasets: Map<Categorie, Dataset[]>;
+  datasets: Dataset[];
+  // onTrainStart: (config: TrainingConfig) => void;
 }
 
-const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: TrainingDialogProps<TData>) => {
-  const [selectedCategory, setSelectedCategory] = useState<Categorie | null>(null);
+interface TrainingResult {
+  accuracy?: number;
+  splits_info?: string;
+  error?: string;
+}
+interface TrainingNotification {
+  training_id: string;
+  status: string;
+  result: TrainingResult;
+  message: string;
+}
+
+const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
+  // const [selectedCategory, setSelectedCategory] = useState<Categorie | null>(null);
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
   const [splitMethod, setSplitMethod] = useState<'ratio' | 'kfold'>('ratio');
   const [ratios, setRatios] = useState({ train: 70, valid: 15, test: 15 });
   const [kValue, setKValue] = useState<number>(5);
-  const [modelTypes, setModelTypes] = useState<AiModelType[]>([]);
-  const [selectedModelType, setSelectedModelType] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const filteredCategories = Array.from(categoriesDatasets.keys()).filter(category => {
+  /* const [modelTypes, setModelTypes] = useState<AiModelType[]>([]);
+  const [selectedModelType, setSelectedModelType] = useState<string>(''); */
+  // const [searchQuery, setSearchQuery] = useState('');
+  /* const filteredCategories = Array.from(categoriesDatasets.keys()).filter(category => {
     const searchString = `${category.serialNumber} ${category.nomenclature} ${category.code}`.toLowerCase();
     return searchString.includes(searchQuery.toLowerCase());
-  });
+  }); */
   const { toast } = useToast();
 
-  useEffect(() => {
+  /* useEffect(() => {
     const loadModelTypes = async () => {
       const types = await fetchAiModelTypes();
       if (types) {
@@ -53,12 +66,12 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
     };
 
     loadModelTypes();
-  }, []);
+  }, []); */
 
-  const handleCategorySelect = (category: Categorie) => {
+  /* const handleCategorySelect = (category: Categorie) => {
     setSelectedCategory(category);
     setSelectedDatasets([]); // Reset datasets when category changes
-  };
+  }; */
 
   const handleDatasetSelect = (datasetId: string) => {
     setSelectedDatasets(prev =>
@@ -74,10 +87,10 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
       return false;
     }
 
-    if (!selectedModelType) {
+    /* if (!selectedModelType) {
       toast({ variant: "destructive", title: "Sélectionner un type de modèle" });
       return false;
-    }
+    } */
 
     if (splitMethod === 'ratio' && (ratios.train + ratios.valid + ratios.test) !== 100) {
       toast({ variant: "destructive", title: "La somme des ratios doit être de 100 %." });
@@ -95,22 +108,49 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
   const handleStartTraining = () => {
     if (!validateInputs()) return;
 
+    const token = sessionStorage.getItem('token') || '';
+    const trainingId = uuidv4();
+    const url = `${import.meta.env.VITE_WEB_SOCKET_URL}ws/training/notifications/?token=${encodeURIComponent(token)}&training_id=${encodeURIComponent(trainingId)}`;
+    const ws = new WebSocket(url);
+
     const config: TrainingConfig = {
-      modelType: selectedModelType,
+      modelId: row.original.id,
+      // modelType: selectedModelType,
       datasets: selectedDatasets,
       splitMethod,
       ...(splitMethod === 'ratio' ? { ratios } : { k: kValue })
     };
 
-    onTrainStart(config);
+    // onTrainStart(config);
+    ws.onopen = () => {
+      toast({ title: "Entraînement commencé", description: "L'entraînement a commencé avec succès." ,
+        className: "text-green-700", });
+      ws.send(JSON.stringify(config));
+    }
+
+    ws.onmessage = (event: MessageEvent) => {
+      const data: TrainingNotification = JSON.parse(event.data);
+      toast({ title: "Notification d'entraînement", description: `Données bien reçues ${data.message}` });
+    };
+
+    ws.onclose = () => {
+      toast({ title: "Entraînement terminé", description: "L'entraînement a été terminé avec succès." ,
+        className: "text-green-700", });
+    }
+
+    ws.onerror = (error) => {
+      toast({ title: "Erreur d'entraînement", description: `Une erreur s'est produite lors de l'entraînement. ${error}` ,
+        className: "text-red-700", });
+    }
   };
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        {<Button variant="outline" className="ml-2">
+        <span className='hover:cursor-pointer'>
           Entraîner un modèle
-        </Button>}
+        </span>
+        
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
@@ -119,8 +159,8 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
 
         <div className="grid gap-4 py-4">
           {/* Category Selection */}
-<div className="space-y-2">
-  <Label>Sélectionner une catégorie</Label>
+          <div className="space-y-2">
+            {/* <Label>Sélectionner une catégorie</Label>
   <div className="relative">
     <input
       type="text"
@@ -155,31 +195,35 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
         )}
       </div>
     </div>
-  </div>
-</div>
+  </div> */}
+          </div>
 
           {/* Dataset Selection (only show for selected category) */}
-          {selectedCategory && (
-            <div className="space-y-2">
-              <Label>Sélectionner les Datasets ({selectedCategory.nomenclature})</Label>
-              <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
-                <div className="grid grid-cols-2 gap-2">
-                  {categoriesDatasets.get(selectedCategory)?.map(dataset => (
-                    <div key={dataset.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={dataset.id}
-                        checked={selectedDatasets.includes(dataset.id)}
-                        onCheckedChange={() => handleDatasetSelect(dataset.id)}
-                      />
-                      <Label htmlFor={dataset.id} className="text-sm">
-                        {dataset.serialNumber} - {dataset.name}
-                      </Label>
-                    </div>
-                  ))}
+          {//selectedCategory && 
+            (
+              <div className="space-y-2">
+                <Label>Sélectionner les Datasets {/* ({selectedCategory.nomenclature}) */}
+
+                </Label>
+                <div className="border rounded-md p-4 max-h-64 overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2">
+                    {/* {categoriesDatasets.get(selectedCategory)?.map(dataset => ( */}
+                    {datasets.map(dataset => (
+                      <div key={dataset.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={dataset.id}
+                          checked={selectedDatasets.includes(dataset.id)}
+                          onCheckedChange={() => handleDatasetSelect(dataset.id)}
+                        />
+                        <Label htmlFor={dataset.id} className="text-sm">
+                          {dataset.serialNumber} - {dataset.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Split Configuration */}
           <div className="space-y-4">
@@ -238,7 +282,7 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
           </div>
 
           {/* Model Type Selection */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>
               Sélectionner le type de modèle
             </Label>
@@ -249,11 +293,11 @@ const TrainDialog = <TData,>({ row, categoriesDatasets, onTrainStart }: Training
             >
               {modelTypes.map((type, idx) => (
                 <option key={type.id} value={type.id}>
-                 {idx+1}- {type.type}
+                  {idx + 1}- {type.type}
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
         </div>
 
         <DialogFooter>

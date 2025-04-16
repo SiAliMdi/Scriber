@@ -76,7 +76,7 @@ const getColumns = ({ setAiModels, onEdit, onDelete }: AiModelsColumnsProps): Co
                     variant="ghost"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    Type
+                    Catégorie
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             )
@@ -88,6 +88,29 @@ const getColumns = ({ setAiModels, onEdit, onDelete }: AiModelsColumnsProps): Co
             }
             else {
                 return row.modelType.length > 10 ? row.modelType.slice(0, 10) + "..." : row.modelType;
+            }
+        }
+    },
+    {
+        header: ({ column }) => {
+            return (
+                <Button
+                    className="text-left font-bold"
+                    variant="ghost"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    Type
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                </Button>
+            )
+        },
+        id: "type",
+        accessorFn: row => {
+            if (!row.type) {
+                return "";
+            }
+            else {
+                return row.type.length > 10 ? row.type.slice(0, 10) + "..." : row.type;
             }
         }
     },

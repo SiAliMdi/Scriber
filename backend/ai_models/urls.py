@@ -10,6 +10,7 @@ urlpatterns = [
         apis.AiModelTypesListView.as_view(), 
         name='model-types-list'
     ),
+    path('trainings/<uuid:model_id>/', apis.AiModelTrainingsAPIView.as_view(), name="ai_model_trainings"),
     # create a new ai_model 
     path("prompts/new/", apis.PromptsApi.as_view(), name="create_ai_model"),
     path("new/", apis.AiModel.as_view(), name="create_ai_model"),

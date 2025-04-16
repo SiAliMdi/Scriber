@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { useToast } from "@/components/ui/use-toast"
-import AiModel from "@/@types/ai-model";
-import { useState } from "react"
+import AiModel, { AiModelType } from "@/@types/ai-model";
+import { useEffect, useState } from "react"
+import { fetchAiModelTypes } from "@/services/AiModelsServices"
 
 interface CreateDialogProps<TData> {
     categoryId: string;
@@ -30,13 +31,22 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [modelType, setModelType] = useState("");
+    const [aimodelTypes, setaiModelTypes] = useState<AiModelType[]>([]);
+    const [aiModelType, setaiModelType] = useState("");
     const { toast } = useToast();
 
 
     const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         event.preventDefault();
 
-        const model : AiModel = {
+        const model : AiModel = modelType !== "extractif" ? 
+        {
+            name,
+            description,
+            modelType,
+            type: aiModelType,
+            category: categoryId,
+        } : {
             name,
             description,
             modelType,
@@ -77,7 +87,17 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
         }
         );
     }
-
+    useEffect(() => {
+        fetchAiModelTypes().then(
+            data => {
+                setaiModelTypes(data);
+                if (data.length > 0) {
+                    setaiModelType(data[0].type);
+                }
+            }
+        );
+    }, []);
+    
     return (
         (
         <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} 
@@ -115,7 +135,7 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
 
                     <div className="grid grid-cols-10 items-center gap-4 w-full px-0 mx-0 space-y-2">
                         <Label htmlFor="description" className="flex items-center justify-center  col-span-1">
-                            Type de modèle
+                            Catégorie du modèle
                         </Label>
                         <div className="flex items-center space-x-2 justify-center  col-span-3">
 
@@ -132,7 +152,24 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
   </div>
                         </div>
 </RadioGroup>
-
+{modelType !== "extractif" && (
+    <div className="grid grid-cols-10 items-center gap-4 w-full px-0 mx-0 space-y-2 mt-2">
+    <Label htmlFor="modelType">Type de modèle</Label>
+    
+    <select
+        id="modelType"
+        value={aiModelType}
+        onChange={(e) => setaiModelType(e.target.value)}
+        className="col-span-4 fill-border bg-white text-gray-900 border rounded-md shadow-sm focus:ring focus:ring-blue-500 focus:border-blue-500"
+    >
+        {aimodelTypes.map((type) => (
+            <option key={type.id} value={type.type}>
+                {type.type}
+            </option>
+        ))}
+    </select>
+</div>
+    )}
                     
                 </div>
                 <DialogFooter>

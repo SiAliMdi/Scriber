@@ -1,5 +1,4 @@
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
-import BasePage from './pages/BasePage'
 import LoginPage from './pages/LoginPage'
 import Users from './pages/Users'
 import './index.css'
@@ -13,11 +12,9 @@ import SearchPage from './pages/SearchPage'
 import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
 import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
 
-
 const  App: React.FC = () => {
     return (
         <div className="App">
-            
             <Router>
                 <Routes>
                 
