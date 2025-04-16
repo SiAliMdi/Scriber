@@ -29,7 +29,7 @@ class Ai_ModelsModel(models.Model):
     name = models.CharField(max_length=255, blank=False, null=False)
     description = models.TextField(blank=True, null=True, default="", max_length=4096)
     created_at = models.DateTimeField(auto_now_add=True)
-    model_path = models.FileField(upload_to='models/' + str(id) + '/' + str(name) + '/' + str(created_at) + '/', blank=False, null=False)
+    # model_path = models.FileField(upload_to='models/' + str(id) + '/' + str(name) + '/' + str(created_at) + '/', blank=False, null=False)
     model_type = models.CharField(max_length=255, blank=True, null=True)
     type = models.ForeignKey('AiModelTypesModel', on_delete=models.DO_NOTHING, related_name='ai_models_type', blank=True, null=True)
     category = models.ForeignKey('categories.CategoriesModel', on_delete=models.DO_NOTHING, related_name='ai_models_category', blank=True, null=True)

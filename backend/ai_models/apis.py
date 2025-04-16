@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from shutil import rmtree
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split, cross_val_score
@@ -120,8 +121,21 @@ class AiModel(views.APIView):
                 model = Ai_ModelsModel.objects.get(pk=model_id)
             except Ai_ModelsModel.DoesNotExist:
                 print("Model not found")
+                return response.Response(data={"error": "Model not found"}, status=404)
             model.deleted = True
             model.save()
+            try:
+                trainings = AiModelTrainingsModel.objects.filter(model=model)
+                for training in trainings:
+                    training.training_status = "deleted"
+                    training.save()
+            except AiModelTrainingsModel.DoesNotExist:
+                print("Training not found")
+            
+            try:
+                rmtree(f"models/{model.id}")
+            except FileNotFoundError:
+                print(f"Directory models/{model.id} not found")
             for mdl in Ai_ModelsModel.objects.filter(deleted=False, serial_number__gt=model.serial_number):
                 mdl.serial_number -= 1
                 mdl.save()

@@ -48,7 +48,6 @@ CLASSIFIER_MAP = {
 class TrainingNotificationConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         if self.scope["user"].is_anonymous:
-            print("Anonymous user")
             await self.close()
             return
         
@@ -66,7 +65,7 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
         text_data_loaded = json.loads(text_data)
         print("Received data:", text_data_loaded)
         model_id = text_data_loaded.get("modelId", None)
-        model_type = text_data_loaded["modelType"]
+        # model_type = text_data_loaded["modelType"]
         datasets = text_data_loaded["datasets"]
         split_method = text_data_loaded["splitMethod"]
         ratios = text_data_loaded.get("ratios", None)
@@ -79,7 +78,7 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             return
 
         # Get the model asynchronously
-        model = await self.get_model(model_type)
+        model = await self.get_model(model_id)
         if not model:
             await self.send_error("Model not found")
             return
@@ -95,24 +94,27 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
 
         # Fetch decisions and annotations asynchronously
         decision_texts, labels = await self.get_decision_texts_and_labels(datasets, user)
+        print("Decision texts:", )
         if not decision_texts:
             await self.send_error("No valid decisions found in the selected datasets")
             return
 
         datasets = await self.get_decisions_datasets(datasets)
-        model_type = await self.get_model_type(model_type)
+        model_type = await self.get_model_type(model_id)
         # Create a training record asynchronously
         training_record = await self.create_training_record(model_type, model_id, datasets, user, split_method, ratios, k_folds)
 
         # Run training in a background thread
         thread = threading.Thread(
             target=self.run_training,
-            args=(training_record.id, decision_texts, labels, model.type, split_method, ratios, k_folds)
+            args=(training_record.id, decision_texts, labels, model_type.type, split_method, ratios, k_folds)
         )
+        print("Starting training thread")
         thread.start()
 
         await self.send_success("Training started")
-
+        print("Training started")
+        
     async def send_error(self, message):
         await self.send(text_data=json.dumps({"error": message}))
 
@@ -127,10 +129,10 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_model(self, model_type):
+    def get_model(self, model_id):
         try:
-            return AiModelTypesModel.objects.get(id=model_type)
-        except ObjectDoesNotExist:
+            return Ai_ModelsModel.objects.get(id=model_id)
+        except Ai_ModelsModel.DoesNotExist:
             return None
 
     @database_sync_to_async
@@ -160,10 +162,10 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
         return decision_texts, labels
 
     @database_sync_to_async
-    def get_model_type(self, model_type_id):
+    def get_model_type(self, model_id):
         try:
-            return AiModelTypesModel.objects.get(pk=model_type_id)
-        except ObjectDoesNotExist:
+            return Ai_ModelsModel.objects.get(pk=model_id).type
+        except Ai_ModelsModel.DoesNotExist:
             return None
         
     @database_sync_to_async
@@ -231,18 +233,19 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
                 acc = scores.mean()
                 splits_info = {"k_folds": k_value, "accuracy": acc, "scores": scores.tolist()}
 
-            model_dir = f"models/{training_record.model.id}"
+            model_dir = f"models/{training_record.model.id}/{str(training_record.id)}/"
             Path(model_dir).mkdir(parents=True, exist_ok=True)
             model_file_path = os.path.join(model_dir, f"{model_name}_trained.pkl")
             joblib.dump(clf, model_file_path)
             training_record.training_status = "finished"
             training_record.training_result = {"accuracy": acc if split_method != "ratio" else acc_test, "splits_info": splits_info}
         except Exception as e:
+            print(f"Training error: {e.with_traceback()}")
             training_record.training_status = "error"
             training_record.training_log = f"Training failed: {str(e)}"
         finally:
             training_record.save()
-
+        print("Training finished")
         self.channel_layer.group_send(
             f"user_{training_record.creator.id}_training_{training_record.id}",
             {"type": "training_notification", "result": training_record.training_result}

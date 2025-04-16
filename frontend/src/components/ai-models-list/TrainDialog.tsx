@@ -45,8 +45,8 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
   const [splitMethod, setSplitMethod] = useState<'ratio' | 'kfold'>('ratio');
   const [ratios, setRatios] = useState({ train: 70, valid: 15, test: 15 });
   const [kValue, setKValue] = useState<number>(5);
-  const [modelTypes, setModelTypes] = useState<AiModelType[]>([]);
-  const [selectedModelType, setSelectedModelType] = useState<string>('');
+  /* const [modelTypes, setModelTypes] = useState<AiModelType[]>([]);
+  const [selectedModelType, setSelectedModelType] = useState<string>(''); */
   // const [searchQuery, setSearchQuery] = useState('');
   /* const filteredCategories = Array.from(categoriesDatasets.keys()).filter(category => {
     const searchString = `${category.serialNumber} ${category.nomenclature} ${category.code}`.toLowerCase();
@@ -54,7 +54,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
   }); */
   const { toast } = useToast();
 
-  useEffect(() => {
+  /* useEffect(() => {
     const loadModelTypes = async () => {
       const types = await fetchAiModelTypes();
       if (types) {
@@ -66,7 +66,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
     };
 
     loadModelTypes();
-  }, []);
+  }, []); */
 
   /* const handleCategorySelect = (category: Categorie) => {
     setSelectedCategory(category);
@@ -87,10 +87,10 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
       return false;
     }
 
-    if (!selectedModelType) {
+    /* if (!selectedModelType) {
       toast({ variant: "destructive", title: "Sélectionner un type de modèle" });
       return false;
-    }
+    } */
 
     if (splitMethod === 'ratio' && (ratios.train + ratios.valid + ratios.test) !== 100) {
       toast({ variant: "destructive", title: "La somme des ratios doit être de 100 %." });
@@ -115,7 +115,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
 
     const config: TrainingConfig = {
       modelId: row.original.id,
-      modelType: selectedModelType,
+      // modelType: selectedModelType,
       datasets: selectedDatasets,
       splitMethod,
       ...(splitMethod === 'ratio' ? { ratios } : { k: kValue })
@@ -282,7 +282,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
           </div>
 
           {/* Model Type Selection */}
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <Label>
               Sélectionner le type de modèle
             </Label>
@@ -297,7 +297,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
                 </option>
               ))}
             </select>
-          </div>
+          </div> */}
         </div>
 
         <DialogFooter>
