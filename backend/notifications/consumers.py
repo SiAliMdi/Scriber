@@ -181,7 +181,7 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
 
     def run_training(self, training_id, texts, labels, model_name, split_method, ratios, k_value):
         training_record = AiModelTrainingsModel.objects.get(id=training_id)
-
+    
         try:
             vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=1000)
             lemmatizer = WordNetLemmatizer()
@@ -204,11 +204,15 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             texts = [" ".join([word for word in text.split() if word not in stop]) for text in texts]
             X = vectorizer.fit_transform(texts)
             y = labels
-
+    
+            # Convert sparse matrix to dense if required
+            if model_name in ["GaussianNB", "LinearDiscriminantAnalysis", "QuadraticDiscriminantAnalysis"]:
+                X = X.toarray()
+    
             classes = np.unique(y)
             weights = compute_class_weight(class_weight="balanced", classes=classes, y=y)
             class_weight = {classes[i]: weights[i] for i in range(len(classes))}
-
+    
             clf_class = CLASSIFIER_MAP[model_name]
             if model_name == "VotingClassifier":
                 base_estimators = [
@@ -228,38 +232,41 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
                 acc_test = round(acc_test, 4)
                 splits_info = {
                     "type_modèle": model_name,
-                    "taille_train":
-                    X_train.shape[0],
+                    "taille_train": X_train.shape[0],
                     "taille_test": X_test.shape[0],
-                    "accuracy_train": acc,  "accuracy_test": acc_test}
+                    "accuracy_train": acc,
+                    "accuracy_test": acc_test
+                }
             else:
                 scores = cross_val_score(clf, X, y, cv=k_value)
                 scores = np.round(scores, 4)
                 acc = scores.mean()
                 taille_fold = X.shape[0] // k_value
-                splits_info = {"type_modèle": model_name,
-                                "k_folds": k_value,
-                               "taille_folds_train": X.shape[0] - taille_fold,
-                               "taille_fold_valid": taille_fold,
-                               "accuracy_moy": acc, "scores_valid": scores.tolist()}
-
+                splits_info = {
+                    "type_modèle": model_name,
+                    "k_folds": k_value,
+                    "taille_folds_train": X.shape[0] - taille_fold,
+                    "taille_fold_valid": taille_fold,
+                    "accuracy_moy": acc,
+                    "scores_valid": scores.tolist()
+                }
+    
             model_dir = f"models/{training_record.model.id}/{str(training_record.id)}/"
             Path(model_dir).mkdir(parents=True, exist_ok=True)
             model_file_path = os.path.join(model_dir, f"{model_name}_trained.pkl")
             joblib.dump(clf, model_file_path)
             training_record.training_status = "entraîné"
-            # training_record.training_result = {"accuracy": acc if split_method != "ratio" else acc_test, "splits_info": splits_info}
             training_record.training_result = splits_info
         except Exception as e:
             training_record.training_result = {"erreur": str(e), "type_modèle": model_name}
             training_record.training_status = "erreur"
-            training_record.training_log = f" Erreur lors de l'entraînement du modèle : {str(e)}"
+            training_record.training_log = f"Erreur lors de l'entraînement du modèle : {str(e)}"
         finally:
             training_record.save()
-        self.channel_layer.group_send(
-            f"user_{training_record.creator.id}_training_{training_record.id}",
-            {"type": "training_notification", "result": training_record.training_result}
-        )
+            self.channel_layer.group_send(
+                f"user_{training_record.creator.id}_training_{training_record.id}",
+                {"type": "training_notification", "result": training_record.training_result}
+            )
 
 
 class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
