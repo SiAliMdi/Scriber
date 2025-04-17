@@ -11,7 +11,9 @@ import {
 import EditDialog, { EditDialogProps } from './EditDialog';
 import ReadDialog, { ReadDialogProps } from './DatasetDialog';
 import LabelsDialog, { LabelsDialogProps } from '../categories-list/LabelsDialog';
-import { useNavigate } from 'react-router-dom';
+import AnnotateDialog from "./AnnotateBinDialog";
+
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -24,6 +26,7 @@ interface DataTableRowActionsProps<TData> {
 
 const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
   const navigate = useNavigate();
+  const location = useLocation();
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
       <DropdownMenu>
@@ -40,13 +43,20 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
           <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
-          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_bin/${row.original.id}`,
+          {/* <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_bin/${row.original.id}`,
             {
               state: {
                 datasetId: row.original.id,
                 datasetSerialNumber: row.original.serialNumber
               }
-            })}>Annoter Binaire</DropdownMenuItem>
+            })}>Annoter Binaire</DropdownMenuItem> */}
+
+            <AnnotateDialog
+            categoryId={location.state.categoryId}
+              datasetId={row.original.id}
+              datasetSerialNumber={row.original.serialNumber}
+            />
+
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_ext/${row.original.id}`,
             {
               state: {

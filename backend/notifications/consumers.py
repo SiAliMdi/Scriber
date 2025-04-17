@@ -3,9 +3,8 @@ import os
 from pathlib import Path
 import threading
 import joblib
-import nltk
 import numpy as np
-from django.db.models import Prefetch
+# from django.db.models import Prefetch
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
@@ -111,7 +110,7 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
         await self.send_success("Entraînement en cours")
         
     async def send_error(self, message):
-        await self.send(text_data=json.dumps({"error": message}))
+        await self.send(text_data=json.dumps({"erreur": message}))
 
     async def send_success(self, message):
         await self.send(text_data=json.dumps({"message": message}))
@@ -252,6 +251,7 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             # training_record.training_result = {"accuracy": acc if split_method != "ratio" else acc_test, "splits_info": splits_info}
             training_record.training_result = splits_info
         except Exception as e:
+            training_record.training_result = {"erreur": str(e), "type_modèle": model_name}
             training_record.training_status = "erreur"
             training_record.training_log = f" Erreur lors de l'entraînement du modèle : {str(e)}"
         finally:
@@ -260,3 +260,73 @@ class TrainingNotificationConsumer(AsyncWebsocketConsumer):
             f"user_{training_record.creator.id}_training_{training_record.id}",
             {"type": "training_notification", "result": training_record.training_result}
         )
+
+
+class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        if self.scope["user"].is_anonymous:
+            await self.close()
+            return
+
+        self.user = self.scope["user"]
+        self.dataset_id = self.scope.get("dataset_id")
+        self.model_id = self.scope.get("model_id")
+        self.training_id = self.scope.get("training_id")
+        self.group_name = f"{self.user.id}_{self.dataset_id[:22]}_{self.training_id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+
+    async def receive(self, text_data=None, bytes_data=None):
+        dataset_id =  self.dataset_id
+        model_id = self.model_id
+        training_id = self.training_id        
+        
+        # Validate the dataset, model, and training asynchronously
+        dataset = await self.get_dataset(dataset_id)
+        model = await self.get_model(model_id)
+        training = await self.get_training(training_id)
+
+        if not dataset or not model or not training:
+            await self.send_error("Données invalides : dataset, modèle ou entraînement introuvable.")
+            return
+
+        # Simulate annotation process
+        await self.send_success(f"Annotation commencée avec le modèle {model.name} et l'entraînement {training.id}.")
+        await self.perform_annotation(dataset, model, training)
+
+    async def send_error(self, message):
+        await self.send(text_data=json.dumps({"error": message}))
+
+    async def send_success(self, message):
+        await self.send(text_data=json.dumps({"message": message}))
+
+    async def send_annotation_complete(self, message):
+        await self.send(text_data=json.dumps({"message": message}))
+
+    @database_sync_to_async
+    def get_dataset(self, dataset_id):
+        try:
+            return DatasetsModel.objects.get(pk=dataset_id, deleted=False)
+        except DatasetsModel.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_model(self, model_id):
+        try:
+            return Ai_ModelsModel.objects.get(pk=model_id, deleted=False)
+        except Ai_ModelsModel.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_training(self, training_id):
+        try:
+            return AiModelTrainingsModel.objects.get(pk=training_id, training_status="entraîné")
+        except AiModelTrainingsModel.DoesNotExist:
+            return None
+
+    async def perform_annotation(self, dataset, model, training):
+        # Simulate annotation process
+        await self.send_annotation_complete(f"Annotation terminée pour le dataset {dataset.id} avec le modèle {model.name}.")
