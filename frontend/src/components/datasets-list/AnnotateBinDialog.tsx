@@ -38,6 +38,7 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
     loadAiModels();
   }, [categoryId]);
 
+    
   const handleModelSelect = async (modelId: string) => {
     setSelectedModel(modelId);
     setTrainings([]); // Reset trainings when a new model is selected
@@ -58,6 +59,7 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
           datasetSerialNumber,
         },
       });
+      window.location.reload();
     } else if (annotationMethod === "model") {
       if (!selectedModel || !selectedTraining) {
         toast({
@@ -125,11 +127,11 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="manual" id="manual" />
-                <Label htmlFor="manual">Annotation Manuelle</Label>
+                <Label htmlFor="manual">Annotation manuelle</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="model" id="model" />
-                <Label htmlFor="model">Annotation avec un Modèle</Label>
+                <Label htmlFor="model">Annotation avec un modèle</Label>
               </div>
             </div>
           </RadioGroup>
@@ -169,7 +171,7 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
                       .filter((training) => training.training_status === "entraîné") // Filtrer les trainings avec "training_status" == "entraîné"
                       .map((training, idx) => (
                         <option key={training.id} value={training.id}>
-                          {idx+1}. {training.type} {training.training_status} le {new Date(training.updated_at).toLocaleString()}
+                          {idx + 1}. {training.type} {training.training_status} le {new Date(training.updated_at).toLocaleString()}
                         </option>
                       ))}
                   </select>
