@@ -43,14 +43,6 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
           <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
-          {/* <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_bin/${row.original.id}`,
-            {
-              state: {
-                datasetId: row.original.id,
-                datasetSerialNumber: row.original.serialNumber
-              }
-            })}>Annoter Binaire</DropdownMenuItem> */}
-
             <AnnotateDialog
             categoryId={location.state.categoryId}
               datasetId={row.original.id}

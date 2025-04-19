@@ -26,10 +26,12 @@ from num2words import num2words
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
 from annotations.models import BinaryAnnotationsModel
-from datasets.models import DatasetsModel
+from datasets.models import DatasetsModel, Labels
 from decisions.models import DatasetsDecisionsModel
 from users.models import ScriberUsers
 from ai_models.models import Ai_ModelsModel, AiModelTrainingsModel, AiModelTypesModel
+from asgiref.sync import sync_to_async
+import asyncio  # Import asyncio for gather
 
 CLASSIFIER_MAP = {
     "LogisticRegression": LogisticRegression,
@@ -294,15 +296,15 @@ class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
         # Validate the dataset, model, and training asynchronously
         dataset = await self.get_dataset(dataset_id)
         model = await self.get_model(model_id)
-        training = await self.get_training(training_id)
+        trained_model = await self.get_training(training_id)
 
-        if not dataset or not model or not training:
+        if not dataset or not model or not trained_model:
             await self.send_error("Données invalides : dataset, modèle ou entraînement introuvable.")
             return
 
         # Simulate annotation process
-        await self.send_success(f"Annotation commencée avec le modèle {model.name} et l'entraînement {training.id}.")
-        await self.perform_annotation(dataset, model, training)
+        await self.send_success(f"Annotation commencée avec le modèle {model.name} et l'entraînement {trained_model.id}.")
+        await self.perform_annotation(dataset, model, trained_model)
 
     async def send_error(self, message):
         await self.send(text_data=json.dumps({"error": message}))
@@ -334,6 +336,84 @@ class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
         except AiModelTrainingsModel.DoesNotExist:
             return None
 
-    async def perform_annotation(self, dataset, model, training):
-        # Simulate annotation process
-        await self.send_annotation_complete(f"Annotation terminée pour le dataset {dataset.id} avec le modèle {model.name}.")
+    @database_sync_to_async
+    def get_trained_model_type(self, trained_model):
+        try:
+            return trained_model.type.type
+        except AiModelTypesModel.DoesNotExist:
+            return None
+    
+    @database_sync_to_async
+    def get_dataset_id(self, dataset):
+        try:
+            return dataset.id
+        except ObjectDoesNotExist:
+            return None
+        
+    @database_sync_to_async
+    def get_text_net(self, decision):
+        try:
+            decision = DatasetsDecisionsModel.objects.select_related('raw_decision').get(id=decision.id)
+            return decision.raw_decision.texte_net
+        except (ObjectDoesNotExist, AttributeError):
+            return None
+        
+    async def perform_annotation(self, dataset, model, trained_model):
+        try:
+            model_dir = f"models/{model.id}/{trained_model.id}/"
+            type = await self.get_trained_model_type(trained_model)
+            model_file_path = os.path.join(model_dir, f"{type}_trained.pkl")
+            
+            if not await sync_to_async(os.path.exists)(model_file_path):  # Use sync_to_async for file operations
+                await self.send_error(f"Le fichier du modèle entraîné est introuvable : {model_file_path}")
+                return
+
+            clf = await sync_to_async(joblib.load)(model_file_path)  # Use sync_to_async for joblib.load()
+            dataset_id = await self.get_dataset_id(dataset)
+            decisions, decision_texts = await self.get_decisions_texts(dataset_id)
+            
+            if not decisions:
+                await self.send_error("Aucune décision trouvée pour ce dataset.")
+                return
+
+            if not decision_texts:
+                await self.send_error("Aucun texte valide trouvé dans les décisions.")
+                return
+
+            vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=1000)
+            X = vectorizer.fit_transform(decision_texts)
+            
+            if isinstance(clf, (GaussianNB, LinearDiscriminantAnalysis, QuadraticDiscriminantAnalysis)):
+                X = X.toarray()
+
+            predictions = clf.predict(X)
+            annotations = [BinaryAnnotationsModel(
+                    decision=decision,
+                    label=await self.get_label(prediction),
+                    model_annotator=model,
+                    trained_model_annotator=trained_model,
+                )  for decision, prediction in zip(decisions, predictions)]
+            
+            await self.bulk_create_annotations(annotations)
+            await self.send_annotation_complete(f"Annotation terminée pour le dataset {dataset_id} avec le modèle {model.name}.")
+        except Exception as e:
+            await self.send_error(f"Erreur lors de l'annotation : {str(e)}")
+
+    @database_sync_to_async
+    def get_decisions_texts(self, dataset_id):
+        decisions = DatasetsDecisionsModel.objects.filter(dataset_id=dataset_id, deleted=False).select_related("raw_decision")
+        decision_texts = []
+        for decision in decisions:
+            text = decision.raw_decision.texte_net
+            decision_texts.append(text)
+        return decisions, decision_texts
+    @database_sync_to_async
+    def get_label(self, prediction):
+        try:
+            return Labels.objects.get(label=str(prediction))
+        except Labels.DoesNotExist:
+            raise Exception(f"Aucun label trouvé pour la prédiction : {prediction}")
+
+    @database_sync_to_async
+    def bulk_create_annotations(self, annotations):
+        BinaryAnnotationsModel.objects.bulk_create(annotations)

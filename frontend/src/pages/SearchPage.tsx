@@ -19,12 +19,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchParameters, Keyword, SearchResult, Decision } from "@/@types/search"
 import { CreateCategory } from "@/components/search-components/CreateCategory";
+import CreateDialog from "@/components/datasets-list/CreateDialog";
+import { createDataset } from "@/services/DatasetsServices";
 
 
 const SearchPage = () => {
   const [categoriesDatasets, setCategoriesDatasets] = useState<Map<Categorie, Dataset[]>>(new Map<Categorie, Dataset[]>());
   const [villes, setVilles] = useState<string[]>(["Toutes les villes"]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [datasets, setDatasets] = useState<Dataset[]>([])
   const [searchParameters, setSearchParameters] = useState<SearchParameters>({
     q: "",
     query_by: "j_texte",
@@ -77,6 +81,22 @@ const SearchPage = () => {
     setKeywordsValue(keywords.map((keyword) => keyword.value));
   }, [keywords]);
 
+  useEffect(() => {
+    
+    setCategoriesDatasets((prev) => {
+      const newMap = new Map(prev);
+      datasets.forEach((dataset) => {
+        const categoryKey = Array.from(newMap.keys()).find((key) => key.id === dataset.categorieId);
+        if (categoryKey) {
+          const categoryDatasets = newMap.get(categoryKey) || [];
+          newMap.set(categoryKey, [...categoryDatasets, dataset]);
+        }
+      });
+      return newMap;
+    }
+    );
+  }, [datasets])
+  
 
   useEffect(() => {
     fetchCategories(setCategoriesDatasets);
@@ -301,6 +321,7 @@ const SearchPage = () => {
                         <DropdownMenuLabel>{`${categorie.serialNumber}-${categorie.nomenclature}-${categorie.code}`}</DropdownMenuLabel>
                       </div>
                       {categoriesDatasets.get(categorie)?.map((dataset, index) => (
+                        index != categoriesDatasets.get(categorie)?.length -1 ? (
                         <DropdownMenuItem
                           key={dataset.id}
                           onSelect={(e) => e.preventDefault()} // Prevent default selection behavior
@@ -324,6 +345,45 @@ const SearchPage = () => {
                             </Label>
                           </div>
                         </DropdownMenuItem>
+                        ) : (
+                          <div key={dataset.id} className="flex items-center space-x-2">
+                          <DropdownMenuItem
+                          key={dataset.id}
+                          onSelect={(e) => e.preventDefault()} // Prevent default selection behavior
+                        >
+                          <div
+                            className="flex items-center space-x-2 w-full"
+                            onClick={(e) => e.stopPropagation()} // Stop event bubbling
+                          >
+                            <Checkbox
+                              id={`dataset-${dataset.id}`}
+                              checked={selectedDatasets.includes(dataset.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedDatasets(prev => checked
+                                  ? [...prev, dataset.id]
+                                  : prev.filter(id => id !== dataset.id)
+                                );
+                              }}
+                            />
+                            <Label htmlFor={`dataset-${dataset.id}`} className="cursor-pointer">
+                              {`${dataset.serialNumber}-${dataset.name}`}
+                            </Label>
+                          </div>
+                        </DropdownMenuItem>
+                        {/* <Button  className="h-6 w-6 p-0 ml-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 hover:shadow-md transition-all duration-200 text-sm font-semibold flex items-center justify-center"
+                                title="Créer un nouveau dataset"
+                                onClick={(e) => {
+                                  // e.stopPropagation(); 
+                                  setCreateDialogOpen(true);
+                                }}
+                                > +</Button>
+                                {
+                createDialogOpen && <CreateDialog categoryId={categorie.id} nextSerialNumber={ dataset.serialNumber + 1} 
+                createDataset={createDataset} setDatasets={setDatasets} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
+                 />
+            } */}
+                          </div>
+                        )
                       ))}
                     </div>
                   ))}
