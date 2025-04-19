@@ -10,6 +10,7 @@ class BinaryAnnotationsSerializer(serializers.ModelSerializer):
             'decision',
             # 'human_annotator',
             'model_annotator',
+            'trained_model_annotator',
             'creator',
             'updator',
             'created_at',

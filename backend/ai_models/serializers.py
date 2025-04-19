@@ -94,6 +94,13 @@ class AiModelTypeSerializer(serializers.ModelSerializer):
 from .models import AiModelTrainingsModel
 
 class AiModelTrainingSerializer(serializers.ModelSerializer):
+    type = serializers.SlugRelatedField(
+        slug_field='type',
+        queryset=AiModelTypesModel.objects.filter(deleted=False),
+        required=False,
+        allow_null=True,
+        default=None,
+    )
     class Meta:
         model = AiModelTrainingsModel
-        fields = ['id', 'training_status', 'training_result', 'updated_at']
+        fields = ['id', 'training_status', 'training_result', 'updated_at', 'type']

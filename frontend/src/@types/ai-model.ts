@@ -34,6 +34,7 @@ export interface TrainingConfig {
 
 export interface Training {
     id: string;
+    type?: string;
     training_status: string;
     training_result: object;
     updated_at: string;

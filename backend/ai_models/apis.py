@@ -424,13 +424,10 @@ class AiModelTrainingsAPIView(views.APIView):
             return response.Response(data={"error": "Unauthorized"}, status=401)
         try:
             model = get_object_or_404(Ai_ModelsModel, pk=model_id)
-            print('model_id', model_id)
             trainings = AiModelTrainingsModel.objects.filter(
                 model_id=model#, training_status__exclude="error"
             ).exclude(training_status="deleted").exclude(training_status="error")
-            print('model_id 2', model_id)
             serializer = AiModelTrainingSerializer(trainings, many=True)
             return response.Response(serializer.data, status=200)
         except Exception as e:
-            print(e.with_traceback())
             return response.Response({"error": str(e)}, status=500)

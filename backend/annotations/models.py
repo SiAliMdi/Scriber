@@ -41,7 +41,8 @@ class BinaryAnnotationsModel(AnnotationsModel):
     end_offset = None
     text = None
     model_annotator = models.ForeignKey('ai_models.Ai_ModelsModel', on_delete=models.DO_NOTHING, related_name='model_annotator', blank=True, null=True)
-    creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_creator', blank=False, null=False)
+    trained_model_annotator = models.ForeignKey('ai_models.AiModelTrainingsModel', on_delete=models.DO_NOTHING, related_name='trained_model_annotator', blank=True, null=True)
+    creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_creator', blank=True, null=True)
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='binary_annotations_decision', blank=False, null=False)
     # human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='binary_annotations_human_annotator', blank=True, null=True)
     label = models.ForeignKey('datasets.Labels', on_delete=models.DO_NOTHING, related_name='binary_annotations_label', blank=False, null=False)

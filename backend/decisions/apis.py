@@ -66,7 +66,7 @@ class BinDatasetRawDecisionsView(views.APIView):
                 decision=decision,
                 label=label_1,
                 creator=user,
-                updator=user
+                # updator=user
             )
             for decision in dataset_decisions if decision.id not in existing_decision_ids
         ]
@@ -106,7 +106,7 @@ class BinDatasetRawDecisionsView(views.APIView):
         user = request.user
         deleted_count = BinaryAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
-            creator=user,
+            # creator=user,
             decision_id__in=decisions_ids  # Ajout d'un filtre pour éviter les annotations non concernées
         ).update(deleted=True)
         return response.Response({"message": f"{deleted_count} decisions and their annotations marked as deleted."}, status=status.HTTP_200_OK)
@@ -262,6 +262,6 @@ class Associer(views.APIView):
                 validated_data.append(serializer.create(validated_decision))
         DatasetsDecisionsModel.objects.bulk_create(validated_data)
         # update dataset size
-        dataset.size = DatasetsModel.objects.filter(dataset=dataset).count()
+        dataset.size = DatasetsDecisionsModel.objects.filter(dataset=dataset).count()
         dataset.save()
         return response.Response(data={"message": "Decision associated successfully"}, status=200)

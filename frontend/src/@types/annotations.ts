@@ -1,9 +1,10 @@
 type BinaryAnnotation = {
     id?: string,
     model_annotator?: string,
-    creator: string,
+    creator?: string,
     decisionId: string,
     label: string,
+    trainedModelAnnotator?: string,
     updator ?: string,
     updated_at ?: Date,
 }
