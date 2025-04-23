@@ -4,6 +4,20 @@ from django.db import models
 
 class AnnotationsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
+    VALIDATION_STATES = [
+        ('unannotated', 'Non annotée'),
+        ('annotated', 'Annotée'),
+        ('validated', 'Validée'),
+        ('corrected', 'Corrigée'),
+    ]
+
+    state = models.CharField(
+        max_length=12,
+        choices=VALIDATION_STATES,
+        default='unannotated',
+        blank=True,
+        null=True,
+    )
     text = models.TextField(blank=True, null=True, default="", max_length=32_768)
     start_offset = models.IntegerField(blank=True, null=True, default=-1)
     end_offset = models.IntegerField(blank=True, null=True, default=-1)
@@ -37,6 +51,7 @@ class BinaryAnnotationsModel(AnnotationsModel):
     '''
     Supposed to contain the binary annotations for a whole decision
     '''
+    
     start_offset = None
     end_offset = None
     text = None
@@ -126,4 +141,3 @@ class ExtractionBinaryAnnotationsModel(models.Model):
             models.Index(fields=['extraction',]),
             models.Index(fields=['binary_annotation',]),
                    ]
-        

@@ -14,6 +14,7 @@ import LabelsDialog, { LabelsDialogProps } from '../categories-list/LabelsDialog
 import AnnotateDialog from "./AnnotateBinDialog";
 
 import { useLocation, useNavigate } from 'react-router-dom';
+import ValidationDialog from './ValidationDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -57,6 +58,13 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
                 labels : row.original.labels,
               }
             })} >Annoter Extractif</DropdownMenuItem>
+
+          <ValidationDialog 
+            datasetId={row.original.id}
+            datasetSerialNumber={row.original.serialNumber}
+            categoryId={location.state.categoryId}
+          />
+      
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

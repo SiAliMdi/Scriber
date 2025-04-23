@@ -4,6 +4,7 @@ type BinaryAnnotation = {
     creator?: string,
     decisionId: string,
     label: string,
+    state?: string,
     trainedModelAnnotator?: string,
     updator ?: string,
     updated_at ?: Date,
