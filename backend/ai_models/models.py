@@ -43,7 +43,7 @@ class Ai_ModelsModel(models.Model):
         ordering = ['created_at']
         indexes = [ models.Index(fields=['name',])]
         db_table = "ai_models"
-
+  
 class PromptsModel(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid4)
     serial_number = CustomIncrementalField()

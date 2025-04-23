@@ -66,19 +66,18 @@ class BinDatasetRawDecisionsView(views.APIView):
                 decision=decision,
                 label=label_1,
                 creator=user,
+                state="unannotated",
                 # updator=user
             )
             for decision in dataset_decisions if decision.id not in existing_decision_ids
         ]
         BinaryAnnotationsModel.objects.bulk_create(new_annotations)
 
-        # Recharger les annotations après insertion
         annotations = BinaryAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
             creator=user
         ).select_related('label', 'decision')
 
-        # Sérialisation des annotations
         annotations_serializer = BinaryAnnotationsSerializer(annotations, many=True)
         return response.Response({
             "raw_decisions": raw_decisions_serializer.data,

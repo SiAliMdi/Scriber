@@ -101,6 +101,8 @@ class AiModelTrainingSerializer(serializers.ModelSerializer):
         allow_null=True,
         default=None,
     )
+    modelId = serializers.UUIDField(source="model.id", read_only=True)  # Add modelId field
+
     class Meta:
         model = AiModelTrainingsModel
-        fields = ['id', 'training_status', 'training_result', 'updated_at', 'type']
+        fields = ['id', 'training_status', 'training_result', 'updated_at', 'type', 'modelId']  # Include modelId
