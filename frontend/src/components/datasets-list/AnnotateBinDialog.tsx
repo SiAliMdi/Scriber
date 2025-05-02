@@ -116,7 +116,7 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <span className="hover:cursor-pointer">Annoter Binaire</span>
+        <span className="hover:cursor-pointer">Annotation pour classification</span>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
@@ -131,7 +131,7 @@ const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: Annotate
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="model" id="model" />
-                <Label htmlFor="model">Annotation avec un modèle</Label>
+                <Label htmlFor="model">Annotation avec un classifieur binaire</Label>
               </div>
             </div>
           </RadioGroup>

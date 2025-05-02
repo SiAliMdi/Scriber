@@ -10,6 +10,7 @@ class JWTWebSocketMiddleware(BaseMiddleware):
         dataset_id = None
         model_id = None
         training_id = None
+        prompt_id = None
 
         # Extract query parameters
         for param in query_string.split("&"):
@@ -21,6 +22,8 @@ class JWTWebSocketMiddleware(BaseMiddleware):
                 model_id = param.split("=")[1]
             elif param.startswith("training_id="):
                 training_id = param.split("=")[1]
+            elif param.startswith("prompt_id="):
+                prompt_id = param.split("=")[1]
 
         if token:
             # Authenticate user
@@ -34,6 +37,7 @@ class JWTWebSocketMiddleware(BaseMiddleware):
         scope["dataset_id"] = dataset_id
         scope["model_id"] = model_id
         scope["training_id"] = training_id
+        scope["prompt_id"] = prompt_id
 
         return await super().__call__(scope, receive, send)
     

@@ -25,13 +25,12 @@ from nltk.stem import PorterStemmer
 from num2words import num2words
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
-from annotations.models import BinaryAnnotationsModel
+from annotations.models import BinaryAnnotationsModel, ExtractionAnnotationsModel, ExtractionTextAnnotationsModel
 from datasets.models import DatasetsModel, Labels
 from decisions.models import DatasetsDecisionsModel
 from users.models import ScriberUsers
 from ai_models.models import Ai_ModelsModel, AiModelTrainingsModel, AiModelTypesModel
 from asgiref.sync import sync_to_async
-import asyncio  # Import asyncio for gather
 
 CLASSIFIER_MAP = {
     "LogisticRegression": LogisticRegression,
@@ -407,6 +406,7 @@ class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
             text = decision.raw_decision.texte_net
             decision_texts.append(text)
         return decisions, decision_texts
+    
     @database_sync_to_async
     def get_label(self, prediction):
         try:
@@ -417,3 +417,167 @@ class AnnotationNotificationConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def bulk_create_annotations(self, annotations):
         BinaryAnnotationsModel.objects.bulk_create(annotations)
+
+
+import re
+
+class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        if self.scope["user"].is_anonymous:
+            await self.close()
+            return
+        
+        self.user = self.scope["user"]
+        # Get required parameters from query string or scope (example below)
+        self.dataset_id = self.scope.get("dataset_id") or self.scope["url_route"]["kwargs"].get("dataset_id")
+        self.model_id = self.scope.get("model_id") or self.scope["url_route"]["kwargs"].get("model_id")
+        self.prompt_id = self.scope.get("prompt_id") or self.scope["url_route"]["kwargs"].get("prompt_id")
+        if not self.dataset_id or not self.model_id or not self.prompt_id:
+            await self.send_error("Données manquantes : dataset_id, model_id ou prompt_id.")
+            await self.close()
+            return
+
+        self.group_name = f"user_{self.user.id}_extract_annotation_{self.dataset_id}"
+        await self.channel_layer.group_add(self.group_name, self.channel_name)
+        await self.accept()
+    
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(self.group_name, self.channel_name)
+    
+    async def receive(self, text_data=None, bytes_data=None):
+        data = json.loads(text_data)
+        dataset_id = data.get("datasetId", self.dataset_id)
+        model_id = data.get("modelId", self.model_id)
+        prompt_id = data.get("promptId", self.prompt_id)
+        dataset = await self.get_dataset(dataset_id)
+        if not dataset:
+            await self.send_error("Dataset non trouvé")
+            return
+        decisions, decision_texts = await self.get_decisions_texts(dataset_id)
+        if not decision_texts:
+            await self.send_error("Aucune décision trouvée")
+            return
+
+        prompt = await self.get_prompt(prompt_id)
+        prompt_text = prompt.prompt if prompt else None
+        json_template = prompt.json_template if prompt and prompt.json_template else None
+        batch_size = 10
+        batches = [list(zip(decisions, decision_texts))[i:i + batch_size] for i in range(0, len(decision_texts), batch_size)]
+        
+        all_extraction_annotations = []
+        all_text_annotations = []
+
+        for batch in batches:
+            batch_decisions, batch_texts = zip(*batch)
+            if "llama" in str(model_id).lower():
+                from .inference_scripts import llama_inference
+                batch_jsons = llama_inference(list(batch_texts), prompt_text, json_template)
+            elif "ministral" in str(model_id).lower():
+                from .inference_scripts import mistral_inference
+                batch_jsons = mistral_inference(list(batch_texts), prompt_text, json_template)
+            else:
+                batch_jsons = [{} for _ in batch_texts]  # fallback
+
+            # Save ExtractionAnnotationsModel and ExtractionTextAnnotationsModel
+            for decision, decision_text, llm_json in zip(batch_decisions, batch_texts, batch_jsons):
+                extraction_ann = ExtractionAnnotationsModel(
+                    decision=decision,
+                    llm_json_result=llm_json,
+                    model_annotator=model_id,
+                    creator=self.user,
+                )
+                all_extraction_annotations.append(extraction_ann)
+
+        # Bulk create ExtractionAnnotationsModel and refresh to get IDs
+        created_extraction_annotations = await sync_to_async(ExtractionAnnotationsModel.objects.bulk_create)(all_extraction_annotations)
+        await sync_to_async(lambda: [ann.refresh_from_db() for ann in created_extraction_annotations])()
+        
+        # Now create ExtractionTextAnnotationsModel for each key-value in the JSON
+        for extraction_ann in created_extraction_annotations:
+            
+            llm_json = json.loads(extraction_ann.llm_json_result) or {}
+            
+            decision_text = await get_decision_text_from_extraction_ann(extraction_ann)
+            
+            for key, value in llm_json.items():
+                
+                if not isinstance(value, str):
+                    all_text_annotations.append(
+                        ExtractionTextAnnotationsModel(
+                            extraction=extraction_ann,
+                            text=value,
+                            start_offset=-1,
+                            end_offset=-1,
+                            label=key,
+                        )
+                    )
+                    continue
+                # Find all occurrences of value in decision_text for offsets
+                matches = [m for m in re.finditer(re.escape(value), decision_text)]
+                if matches:
+                    # for match in matches:
+                    all_text_annotations.append(
+                        ExtractionTextAnnotationsModel(
+                            extraction=extraction_ann,
+                            text=value,
+                            start_offset=matches[0].start(),
+                            end_offset=matches[0].end(),
+                            label=key,
+                        )
+                    )
+                else:
+                    # If not found, store with -1 offsets
+                    all_text_annotations.append(
+                        ExtractionTextAnnotationsModel(
+                            extraction=extraction_ann,
+                            text=value,
+                            start_offset=-1,
+                            end_offset=-1,
+                            label=key,
+                        )
+                    )
+        
+        # Bulk create ExtractionTextAnnotationsModel
+        await sync_to_async(ExtractionTextAnnotationsModel.objects.bulk_create)(all_text_annotations)
+        
+        await self.send_annotation_complete("Annotations extractives enregistrées avec succès.")
+        # close the connection
+        await self.close()
+    async def send_error(self, message):
+        await self.send(text_data=json.dumps({"error": message}))
+    
+    async def send_annotation_complete(self, message):
+        await self.send(text_data=json.dumps({"message": message}))
+    
+    @database_sync_to_async
+    def get_dataset(self, dataset_id):
+        from datasets.models import DatasetsModel
+        try:
+            return DatasetsModel.objects.get(pk=dataset_id, deleted=False)
+        except DatasetsModel.DoesNotExist:
+            return None
+
+    @database_sync_to_async
+    def get_decisions_texts(self, dataset_id):
+        decisions = DatasetsDecisionsModel.objects.filter(dataset_id=dataset_id, deleted=False).select_related("raw_decision")
+        decision_texts = [d.raw_decision.texte_net for d in decisions]
+        return decisions, decision_texts
+
+
+    @database_sync_to_async
+    def get_prompt(self, prompt_id):
+        from ai_models.models import PromptsModel
+        try:
+            return PromptsModel.objects.get(pk=prompt_id)
+        except PromptsModel.DoesNotExist:
+            return None
+        except Exception as e:
+            return None
+
+@sync_to_async
+def get_decision_text_from_extraction_ann(extraction_ann):
+    decision = extraction_ann.decision
+    if decision and decision.raw_decision:
+        return decision.raw_decision.texte_net
+    return ""
+
