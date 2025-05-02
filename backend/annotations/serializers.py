@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import BinaryAnnotationsModel, TextAnnotationsModel
+from .models import BinaryAnnotationsModel, TextAnnotationsModel, ExtractionAnnotationsModel, ExtractionTextAnnotationsModel
 
 class BinaryAnnotationsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -45,3 +45,14 @@ class TextAnnotationsCreateSerializer(serializers.ModelSerializer):
             **validated_data
         )
         return annotation
+
+class ExtractionTextAnnotationsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExtractionTextAnnotationsModel
+        fields = ['id', 'extraction', 'text', 'start_offset', 'end_offset', 'label']
+
+class ExtractionAnnotationsSerializer(serializers.ModelSerializer):
+    extraction_text = ExtractionTextAnnotationsSerializer(many=True, read_only=True)
+    class Meta:
+        model = ExtractionAnnotationsModel
+        fields = ['id', 'decision', 'llm_json_result', 'model_annotator', 'state', 'creator', 'created_at', 'updated_at', 'extraction_text']

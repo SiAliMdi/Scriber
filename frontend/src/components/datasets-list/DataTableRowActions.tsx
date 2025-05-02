@@ -12,7 +12,7 @@ import EditDialog, { EditDialogProps } from './EditDialog';
 import ReadDialog, { ReadDialogProps } from './DatasetDialog';
 import LabelsDialog, { LabelsDialogProps } from '../categories-list/LabelsDialog';
 import AnnotateDialog from "./AnnotateBinDialog";
-
+import AnnotateExtractDialog from "./AnnotateExtractDialog";
 import { useLocation, useNavigate } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
 
@@ -40,31 +40,35 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
           <ReadDialog {...{ row } as ReadDialogProps<TData>} />
-          <EditDialog {...{ row, onEdit, setDatasets, } as EditDialogProps<TData>}  />
+          <EditDialog {...{ row, onEdit, setDatasets, } as EditDialogProps<TData>} />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
           <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
-            <AnnotateDialog
+          <AnnotateDialog
             categoryId={location.state.categoryId}
-              datasetId={row.original.id}
-              datasetSerialNumber={row.original.serialNumber}
-            />
-
-          <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_ext/${row.original.id}`,
+            datasetId={row.original.id}
+            datasetSerialNumber={row.original.serialNumber}
+          />
+          <AnnotateExtractDialog
+            categoryId={location.state.categoryId}
+            datasetId={row.original.id}
+            datasetSerialNumber={row.original.serialNumber}
+          />
+          {/* <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_ext/${row.original.id}`,
             {
               state: {
                 datasetId: row.original.id,
                 datasetSerialNumber: row.original.serialNumber,
                 labels : row.original.labels,
               }
-            })} >Annoter Extractif</DropdownMenuItem>
+            })} >Annoter Extractif</DropdownMenuItem> */}
 
-          <ValidationDialog 
+          <ValidationDialog
             datasetId={row.original.id}
             datasetSerialNumber={row.original.serialNumber}
             categoryId={location.state.categoryId}
           />
-      
+
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

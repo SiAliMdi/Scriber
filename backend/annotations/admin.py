@@ -15,11 +15,8 @@ class ExtractionAnnotationsAdmin(admin.ModelAdmin):
 class ExtractionTextAnnotationsAdmin(admin.ModelAdmin):
     list_display = [f.name for f in ExtractionTextAnnotationsModel._meta.fields]
 
-class ExtractionBinaryAnnotationsAdmin(admin.ModelAdmin):
-    list_display = [f.name for f in ExtractionBinaryAnnotationsModel._meta.fields]
 
 admin.site.register(BinaryAnnotationsModel, BinaryAnnotationsAdmin)
 admin.site.register(TextAnnotationsModel, TextAnnotationsAdmin)
 admin.site.register(ExtractionAnnotationsModel, ExtractionAnnotationsAdmin)
 admin.site.register(ExtractionTextAnnotationsModel, ExtractionTextAnnotationsAdmin)
-admin.site.register(ExtractionBinaryAnnotationsModel, ExtractionBinaryAnnotationsAdmin)

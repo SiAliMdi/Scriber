@@ -54,6 +54,7 @@ AUTHENTICATION_BACKENDS = [
     #  'django.contrib.auth.backends.ModelBackend',
     'users.services.ScriberUserAuthentication',
 ]
+
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
@@ -76,6 +77,7 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
 ROOT_URLCONF = 'backend.urls'
 
 TEMPLATES = [
@@ -192,6 +194,11 @@ TYPESENSE_HOST = getenv('TYPESENSE_HOST')
 TYPESENSE_PORT = getenv('TYPESENSE_PORT')
 TYPESENSE_API_KEY = getenv('TYPESENSE_API_KEY')
 TYPESENSE_COLLECTION_NAME = getenv('TYPESENSE_COLLECTION_NAME')
+
+
+# LLMs APIs
+MISTRAL_API_URL = getenv('MISTRAL_API_URL')
+LLAMA_API_URL = getenv('LLAMA_API_URL')
 
 # LOGGING setup
 DJANGO_ROOT_LOG_PATH = getenv('DJANGO_ROOT_LOG_PATH')
