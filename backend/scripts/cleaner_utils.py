@@ -105,11 +105,11 @@ def normalize_text(text, tcp=False):
     text = ud.normalize('NFD', text)
     text = clean(
         text,
-        fix_unicode=True,
-        to_ascii=False,
-        lower=False,
-        normalize_whitespace=False,
-        lang="fr"
+        # fix_unicode=True,
+        # to_ascii=False,
+        # lower=False,
+        # normalize_whitespace=False,
+        # lang="fr"
     )
 
     if tcp:

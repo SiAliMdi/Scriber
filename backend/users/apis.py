@@ -46,7 +46,6 @@ class LoginUserApi(views.APIView):
     def post(self, request):
         email = request.data.get("email")
         password = request.data.get("password")
-        
         try:
             user = services.login_user(request, email, password)
             # new user accounts should be validated by the admin before being able tologin

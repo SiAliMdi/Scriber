@@ -1,8 +1,9 @@
 from json import dumps
-from backend.settings import MISTRAL_API_URL, LLAMA_API_URL
+from backend.settings import MISTRAL_API_URL, LLAMA_API_URL, MISTRAL_TAG, LLAMA_TAG, LLM_API_KEY
 from openai import OpenAI
 from tqdm import tqdm
 from to_json_schema.to_json_schema import SchemaBuilder
+from asgiref.sync import sync_to_async
 
 default_json_object = {
   "métadonnées": {
@@ -163,12 +164,12 @@ decision_context_prompt = "\nFollowing is the legal decision text: \n"
 json_schema_prompt = "\nYou must respect the JSON template and this JSON schema \n"
 json_template_prompt = "\nUse the following JSON template: : \n"
 
-
+@sync_to_async(thread_sensitive=False)
 def mistral_inference(decision_texts, prompt_text=None, json_template=None):
     
-    model= "mistral-8b"
+    model= MISTRAL_TAG
 
-    client = OpenAI(base_url=MISTRAL_API_URL, api_key="1234")
+    client = OpenAI(base_url=MISTRAL_API_URL, api_key= LLM_API_KEY)
     valid = False
     max_tries = 3
     tries = 0
@@ -186,9 +187,14 @@ def mistral_inference(decision_texts, prompt_text=None, json_template=None):
             json_template = default_json_object
             json_schema = default_json_template
         else:
+          try:
             schema_builder = SchemaBuilder()
             json_schema    = schema_builder.to_json_schema(json_template)
-        
+          except Exception as e:
+            print(f"Error: {e}")
+            json_template = ""
+            json_schema = ""
+            
         prompt[1]["content"] = prompt_text  \
                         + json_template_prompt  \
                         + str(json_template) + json_schema_prompt  \
@@ -214,13 +220,15 @@ def mistral_inference(decision_texts, prompt_text=None, json_template=None):
                 print(f"Error: {e}")
 
     pbar.close()
+    print(f"Responses: {responses}")
     return responses
 
+@sync_to_async(thread_sensitive=False)
 def llama_inference(decision_texts, prompt_text=None, json_template=None):
     
-    model= "llama-3.1-8B"
+    model= LLAMA_TAG
 
-    client = OpenAI(base_url=LLAMA_API_URL, api_key="1234")
+    client = OpenAI(base_url=LLAMA_API_URL, api_key= LLM_API_KEY)
     valid = False
     max_tries = 3
     tries = 0
@@ -238,9 +246,13 @@ def llama_inference(decision_texts, prompt_text=None, json_template=None):
             json_template = default_json_object
             json_schema = default_json_template
         else:
+          try:
             schema_builder = SchemaBuilder()
             json_schema    = schema_builder.to_json_schema(json_template)
-        
+          except Exception as e:
+            print(f"Error: {e}")
+            json_template = ""
+            json_schema = ""
         prompt[1]["content"] = prompt_text  \
                         + json_template_prompt  \
                         + str(json_template) + json_schema_prompt  \
@@ -257,6 +269,7 @@ def llama_inference(decision_texts, prompt_text=None, json_template=None):
                 temperature=.3,
                 extra_body={
                     "guided_json": dumps(json_template),
+                    "chat_template": chat_template,
                 },
                 )
                 response = response.choices[0].message.content
@@ -266,6 +279,7 @@ def llama_inference(decision_texts, prompt_text=None, json_template=None):
                 print(f"Error: {e}")
 
     pbar.close()
+    print(f"Responses: {responses}")
     return responses
 
 

@@ -3,7 +3,7 @@ import LoginPage from './pages/LoginPage'
 import Users from './pages/Users'
 import './index.css'
 import RegisterPage from './pages/RegisterPage'
-import React from 'react'
+import React, { useEffect } from 'react'
 import CategoriesPage from './pages/CategoriesPage'
 import DatasetsPage from './pages/DatasetsPage'
 import ModelsPage from './pages/ModelsPage'
@@ -12,8 +12,24 @@ import SearchPage from './pages/SearchPage'
 import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
 import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
 import BinAnnotationValidation from './pages/BinAnnotationValidation'
+import { useToast } from "@/components/ui/use-toast"; // adjust import as needed
 
 const  App: React.FC = () => {
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const handler = (event: Event) => {
+            const customEvent = event as CustomEvent;
+            toast({
+                title: "Fin d'annotation extractive",
+                description: customEvent.detail?.message || "L'annotation extractive est terminée.",
+                className: "text-green-700",
+            });
+        };
+        window.addEventListener("extract-annotation-finished", handler);
+        return () => window.removeEventListener("extract-annotation-finished", handler);
+    }, [toast]);
+
     return (
         <div className="App">
             <Router>

@@ -54,7 +54,7 @@ def setup_logger(logger_name: str = "ExportLogger"):
     month = current_date.strftime('%m')
     day = current_date.strftime('%d')
     
-    log_dir = join(settings.CELERY_ROOT_LOG_PATH, year, month)
+    log_dir = join(settings.JUDILIBRE_ROOT_LOG_PATH, year, month)
     Path(log_dir).mkdir(parents=True, exist_ok=True)
     log_filename = join(log_dir, f"{day}.log")
     
@@ -222,10 +222,10 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         # Function to check existence of a batch of IDs in Typesense
         def check_existence_batch(batch):
             try:
-                result = typesense_client.collections[collection_name].documents.search({
-                    'q': '*',
-                    'filter_by': f'id: {" || id: ".join(batch)}',
-                    'per_page': len(batch)
+                result = typesense_client.collections[collection_name].documents.search({ \
+                    'q': '*', \
+                    'filter_by': f'id: {" || id: ".join(batch)}', \
+                    'per_page': len(batch) \
                 })
                 existing_ids = {doc['document']['id'] for doc in result['hits']}
                 return [id for id in batch if id not in existing_ids]

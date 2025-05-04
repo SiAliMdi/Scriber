@@ -45,12 +45,14 @@ const AnnotateExtractDialog = ({ categoryId, datasetId, datasetSerialNumber }: A
       window.location.reload();
     } else if (annotationMethod === "model" && aiModel) {
       const token = sessionStorage.getItem("token") || "";
+      console.log("Token:", token);
       // Note: Update the path to point to the new extract annotation endpoint
       const url = `${import.meta.env.VITE_WEB_SOCKET_URL}ws/extract_annotation/notifications/?token=${encodeURIComponent(
         token
       )}&dataset_id=${encodeURIComponent(datasetId)}&model_id=${encodeURIComponent(aiModel)}&prompt_id=${encodeURIComponent(selectedPrompt?.id || "vide")}`;
       const ws = new WebSocket(url);
-
+      
+      console.log("Token: 2 ", token);
       ws.onopen = () => {
         const payload = { datasetId, modelId: aiModel, prompt: selectedPrompt };
         ws.send(JSON.stringify(payload));
@@ -72,6 +74,11 @@ const AnnotateExtractDialog = ({ categoryId, datasetId, datasetSerialNumber }: A
       };
 
       ws.onclose = () => {
+        
+        window.dispatchEvent(new CustomEvent("extract-annotation-finished", {
+          detail: { message: "L'annotation a terminé avec succès." }
+        }));
+
         toast({
           title: "Annotation extractive terminée",
           description: "L'annotation a terminé avec succès.",

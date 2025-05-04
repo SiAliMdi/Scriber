@@ -426,7 +426,6 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
         if self.scope["user"].is_anonymous:
             await self.close()
             return
-        
         self.user = self.scope["user"]
         # Get required parameters from query string or scope (example below)
         self.dataset_id = self.scope.get("dataset_id") or self.scope["url_route"]["kwargs"].get("dataset_id")
@@ -471,10 +470,10 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
             batch_decisions, batch_texts = zip(*batch)
             if "llama" in str(model_id).lower():
                 from .inference_scripts import llama_inference
-                batch_jsons = llama_inference(list(batch_texts), prompt_text, json_template)
+                batch_jsons = await llama_inference(list(batch_texts), prompt_text, json_template)
             elif "ministral" in str(model_id).lower():
                 from .inference_scripts import mistral_inference
-                batch_jsons = mistral_inference(list(batch_texts), prompt_text, json_template)
+                batch_jsons = await mistral_inference(list(batch_texts), prompt_text, json_template)
             else:
                 batch_jsons = [{} for _ in batch_texts]  # fallback
 
@@ -543,6 +542,7 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
         await self.send_annotation_complete("Annotations extractives enregistrées avec succès.")
         # close the connection
         await self.close()
+    
     async def send_error(self, message):
         await self.send(text_data=json.dumps({"error": message}))
     
