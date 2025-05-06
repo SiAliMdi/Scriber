@@ -3,17 +3,65 @@ import BasePage from "./BasePage";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Trash2 } from 'lucide-react';
+import { Settings, Trash2, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLocation } from "react-router-dom";
-import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions } from "@/services/ExtractiveAnnotationServices";
+import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions, validateDecisionAnnotations } from "@/services/ExtractiveAnnotationServices";
 import { fetchLabels } from "@/services/LabelsServices";
 import { Decision } from "@/@types/decision";
 import { TextAnnotation } from "@/@types/annotations";
 import { Label as LabelType } from "@/@types/label";
 import LabelsDialog from "@/components/annotation-forms/extractive/LabelsDialog";
+import { LLMExtractionAnnotationsProvider, useLLMExtractionAnnotations } from "@/contexts/LLMExtractionAnnotationsContext";
+import { LLMExtractionSpan } from "@/@types/annotations";
 
-const ExtractiveAnnotationPage: React.FC = () => {
+// Color palette for LLM annotation highlighting
+const colorPalette = [
+  "bg-blue-200 text-blue-900",
+  "bg-green-200 text-green-900",
+  "bg-yellow-200 text-yellow-900",
+  "bg-pink-200 text-pink-900",
+  "bg-purple-200 text-purple-900",
+  "bg-orange-200 text-orange-900",
+  "bg-red-200 text-red-900",
+  "bg-cyan-200 text-cyan-900",
+];
+
+function getColorClass(index: number) {
+  return colorPalette[index % colorPalette.length];
+}
+
+// Helper to highlight LLM annotation spans in the decision text
+function highlightLLMSpans(text: string, spans: LLMExtractionSpan[]) {
+  if (!spans || spans.length === 0) return text;
+  let elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const sorted = [...spans]
+    .filter(s => typeof s.start_offset === "number" && typeof s.end_offset === "number")
+    .sort((a, b) => (a.start_offset! - b.start_offset!));
+  sorted.forEach((span, idx) => {
+    if (span.start_offset! > lastIndex) {
+      elements.push(<span key={`text-${lastIndex}`}>{text.slice(lastIndex, span.start_offset)}</span>);
+    }
+    elements.push(
+      <span
+        key={`llm-span-${idx}`}
+        className={`${getColorClass(idx)} font-semibold px-1 rounded`}
+        title={span.label}
+      >
+        {text.slice(span.start_offset!, span.end_offset!)}
+      </span>
+    );
+    lastIndex = span.end_offset!;
+  });
+  if (lastIndex < text.length) {
+    elements.push(<span key={`text-end`}>{text.slice(lastIndex)}</span>);
+  }
+  return elements;
+}
+
+// Main component
+const ExtractiveLLMAnnotationValidation: React.FC = () => {
     const [decisions, setDecisions] = useState<Decision[]>([]);
     const [annotations, setAnnotations] = useState<Record<string, TextAnnotation[]>>({});
     const [totalAnnotationCounts, setTotalAnnotationCounts] = useState<Record<string, number>>({});
@@ -27,6 +75,7 @@ const ExtractiveAnnotationPage: React.FC = () => {
 
     const location = useLocation();
     const datasetId = location.state?.datasetId;
+    const selectedModel = location.state?.selectedModel;
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const decisionRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -66,6 +115,7 @@ const ExtractiveAnnotationPage: React.FC = () => {
             setCurrentLabel(labels[0]);
         }
     }, [labels, currentLabel]);
+
     useEffect(() => {
         if (!selectedDecision) return;
 
@@ -223,6 +273,36 @@ const ExtractiveAnnotationPage: React.FC = () => {
             .catch(console.error);
     };
 
+    // Validate all annotations for the selected decision
+    const handleValidateDecision = async () => {
+        if (!selectedDecision) return;
+        const anns = annotations[selectedDecision.id] || [];
+        if (anns.length === 0) return;
+        try {
+            await validateDecisionAnnotations(selectedDecision.id);
+            // Update local state
+            setAnnotations(prev => ({
+                ...prev,
+                [selectedDecision.id]: prev[selectedDecision.id].map(a => ({ ...a, state: "validated" })),
+            }));
+            // Move to next decision
+            goToNextDecision();
+        } catch (err) {
+            console.error("Validation failed", err);
+        }
+    };
+
+    // Helper to determine decision color
+    const getDecisionStateColor = (decisionId: string) => {
+        const anns = annotations[decisionId] || [];
+        for (const ann of anns) {
+            console.log("Annotation state:", ann.state); // Debug log
+        }
+        if (anns.length === 0) return "bg-gray-100";
+        if (anns.every(a => a.state === "validated")) return "bg-green-100";
+        return "bg-blue-100";
+    };
+
 
     const handleDeleteSelected = () => {
         const decisionIdsToDelete = Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]);
@@ -307,8 +387,64 @@ const ExtractiveAnnotationPage: React.FC = () => {
         }, 500);
     };
 
+    // Wrap the main render in the LLMExtractionAnnotationsProvider
+    if (!datasetId || !selectedModel) {
+      return <div className="p-4 text-red-500 text-center mt-10"><strong>Missing dataset or model.</strong></div>;
+    }
+
+    return (
+      <LLMExtractionAnnotationsProvider datasetId={datasetId} modelAnnotator={selectedModel}>
+        <ExtractiveLLMAnnotationValidationInner
+          // pass all props/state as needed
+          decisions={decisions}
+          setDecisions={setDecisions}
+          annotations={annotations}
+          setAnnotations={setAnnotations}
+          totalAnnotationCounts={totalAnnotationCounts}
+          setTotalAnnotationCounts={setTotalAnnotationCounts}
+          selectedDecision={selectedDecision}
+          setSelectedDecision={setSelectedDecision}
+          checkedDecisions={checkedDecisions}
+          setCheckedDecisions={setCheckedDecisions}
+          loading={loading}
+          error={error}
+          labels={labels}
+          setLabels={setLabels}
+          currentLabel={currentLabel}
+          setCurrentLabel={setCurrentLabel}
+          isDialogOpen={isDialogOpen}
+          setIsDialogOpen={setIsDialogOpen}
+          scrollAreaRef={scrollAreaRef}
+          decisionRefs={decisionRefs}
+          handleTextSelection={handleTextSelection}
+          handleValidateDecision={handleValidateDecision}
+          handleDeleteSelected={handleDeleteSelected}
+          handleDecisionClick={handleDecisionClick}
+          handleKeyDown={handleKeyDown}
+          goToPreviousDecision={goToPreviousDecision}
+          goToNextDecision={goToNextDecision}
+        />
+      </LLMExtractionAnnotationsProvider>
+    );
+};
+
+// Split out the inner logic so we can use the LLM context
+const ExtractiveLLMAnnotationValidationInner: React.FC<any> = (props) => {
+    // ...reuse all the logic from the original component, but replace the main panel render with the following...
+    const {
+      decisions, selectedDecision, annotations, labels, loading, error,
+      // ...other props...
+    } = props;
+    const { llmAnnotations } = useLLMExtractionAnnotations();
+
+    // ...existing code...
+
     if (loading) return <div className="p-4 text-center mt-10"><strong>Chargement des décisions...</strong></div>;
     if (error) return <div className="p-4 text-red-500 text-center mt-10"><strong>{error}</strong></div>;
+
+    // Get LLM annotation for the selected decision
+    const llmAnn = selectedDecision ? llmAnnotations[selectedDecision.id] : undefined;
+    const llmSpans = llmAnn?.spans || [];
 
     return (
         <div className="h-screen flex flex-col">
@@ -320,29 +456,42 @@ const ExtractiveAnnotationPage: React.FC = () => {
                         <span className="text-sm">
                             {decisions.findIndex(d => d.id === selectedDecision?.id) + 1}/{decisions.length}
                         </span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDeleteSelected}
-                            disabled={!Object.values(checkedDecisions).some(v => v)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={props.handleValidateDecision}
+                                disabled={
+                                    !selectedDecision ||
+                                    !(annotations[selectedDecision.id]?.length > 0) ||
+                                    annotations[selectedDecision.id]?.every(a => a.state === "validated")
+                                }
+                                title="Valider la décision"
+                            >
+                                {"Validate "} <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={props.handleDeleteSelected}
+                                disabled={!Object.values(props.checkedDecisions).some(v => v)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
-                    <ScrollArea className="flex-1 p-2 overflow-auto" ref={scrollAreaRef}>
+                    <ScrollArea className="flex-1 p-2 overflow-auto" ref={props.scrollAreaRef}>
                         {decisions.map((decision, idx) => (
                             <div
                                 key={decision.id}
-                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""
-                                    } ${annotations[decision.id]?.length > 0 ? "text-green-600 font-medium" : "text-gray-500"
-                                    }`}
-                                onClick={() => handleDecisionClick(decision)}
-                                ref={(el) => (decisionRefs.current[idx] = el)}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id)}`}
+                                onClick={() => props.handleDecisionClick(decision)}
+                                ref={(el) => (props.decisionRefs.current[idx] = el)}
                             >
                                 <Checkbox
-                                    checked={checkedDecisions[decision.id] || false}
+                                    checked={props.checkedDecisions[decision.id] || false}
                                     onCheckedChange={(checked) =>
-                                        setCheckedDecisions(prev => ({
+                                        props.setCheckedDecisions(prev => ({
                                             ...prev,
                                             [decision.id]: !!checked
                                         }))
@@ -364,63 +513,52 @@ const ExtractiveAnnotationPage: React.FC = () => {
                 {/* Main Panel */}
                 <Card className="flex-1 flex flex-col m-4">
                     <CardContent className="flex flex-col h-full p-0">
-                        {/* Headers Container */}
-                        <div className="sticky top-0 z-20 bg-white">
-                            {/* Total Annotation Counts */}
-                            <div className="p-2 border-b flex justify-start">
-                                <h3 className="text-lg font-semibold mr-8">Total des annotations</h3>
-                                <div className="flex space-x-4">
-                                    {labels.map((label) => (
-                                        <div key={label.id} className="flex items-center">
-                                            <span className="mr-2" style={{ color: label.color }}>●</span>
-                                            <span>{label.label}: {totalAnnotationCounts[label.id] || 0}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Labels and Settings */}
-                            <div className="p-2 border-b flex items-center">
-                                <Settings
-                                    className="h-6 w-6 cursor-pointer mr-4"
-                                    onClick={() => setIsDialogOpen(true)}
-                                />
-                                <LabelsDialog
-                                    open={isDialogOpen}
-                                    onOpenChange={setIsDialogOpen}
-                                    labels={labels}
-                                    setLabels={setLabels}
-                                    datasetId={datasetId}
-                                    datasetSerialNumber={location.state?.datasetSerialNumber}
-                                />
-                                <div className="flex space-x-2 overflow-x-auto">
-                                    {labels.map((label) => (
-                                        <button
-                                            key={label.id}
-                                            style={{ backgroundColor: label.color }}
-                                            onClick={() => setCurrentLabel(label)}
-                                            className={`px-3 py-1 rounded border transition-colors duration-200 whitespace-nowrap ${currentLabel?.id === label.id ? "border-blue-500 shadow-lg font-bold" : "border-transparent"
-                                                }`}
-                                        >
-                                            {label.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Scrollable Decision Text */}
+                        {/* Scrollable Decision Text with LLM highlights */}
                         <ScrollArea className="flex-1 p-2">
                             {selectedDecision ? (
-                                <div
-                                    className="decision-text whitespace-pre-wrap"
-                                    onMouseUp={handleTextSelection}
-                                    dangerouslySetInnerHTML={{ __html: selectedDecision.j_texte || "Aucun texte disponible." }}
-                                />
+                                <div className="decision-text whitespace-pre-wrap" onMouseUp={props.handleTextSelection}>
+                                    {highlightLLMSpans(selectedDecision.j_texte || "", llmSpans)}
+                                </div>
                             ) : (
                                 <div className="p-4 text-center">Sélectionnez une décision pour en afficher le texte.</div>
                             )}
                         </ScrollArea>
+                        {/* Table with three columns: User, Reference, LLM */}
+                        <div className="mt-4">
+                          <div className="grid grid-cols-3 gap-4">
+                            {/* User Annotations */}
+                            <div>
+                              <div className="font-semibold mb-2">Annotations utilisateur</div>
+                              {(annotations[selectedDecision?.id] || []).map((ann, idx) => (
+                                <div key={ann.id} className="mb-1">
+                                  <span className="font-bold">{labels.find(l => l.id === ann.label)?.label || ann.label}</span>
+                                  <div>
+                                    <span className="inline-block bg-gray-100 rounded px-1">{ann.text}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {/* Reference Annotations (if any, else leave blank or duplicate user) */}
+                            <div>
+                              <div className="font-semibold mb-2">Annotations de référence</div>
+                              {/* You can fill this with reference annotations if available */}
+                            </div>
+                            {/* LLM Annotations */}
+                            <div>
+                              <div className="font-semibold mb-2">Annotations LLM</div>
+                              {llmSpans.map((span, idx) => (
+                                <div key={span.id} className="mb-2">
+                                  <span className="font-bold">{span.label}</span>
+                                  <div>
+                                    <span className={`inline-block rounded px-1 ${getColorClass(idx)}`}>
+                                      {span.text}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                     </CardContent>
                 </Card>
             </div>
@@ -428,4 +566,4 @@ const ExtractiveAnnotationPage: React.FC = () => {
     );
 };
 
-export default ExtractiveAnnotationPage;
+export default ExtractiveLLMAnnotationValidation;

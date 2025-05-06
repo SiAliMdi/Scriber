@@ -27,7 +27,7 @@ from decisions.models import RawDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
 from .cleaner_utils import clean_text
 from django.conf import settings
-from django.db.models import Count, Subquery, OuterRef
+# from django.db.models import Count, Subquery, OuterRef
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from more_itertools import chunked

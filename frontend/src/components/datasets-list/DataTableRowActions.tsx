@@ -15,6 +15,7 @@ import AnnotateDialog from "./AnnotateBinDialog";
 import AnnotateExtractDialog from "./AnnotateExtractDialog";
 import { useLocation, useNavigate } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
+import ExtValidationDialog from './ExtValidationDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -64,6 +65,12 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
             })} >Annoter Extractif</DropdownMenuItem> */}
 
           <ValidationDialog
+            datasetId={row.original.id}
+            datasetSerialNumber={row.original.serialNumber}
+            categoryId={location.state.categoryId}
+          />
+
+          <ExtValidationDialog
             datasetId={row.original.id}
             datasetSerialNumber={row.original.serialNumber}
             categoryId={location.state.categoryId}

@@ -21,6 +21,7 @@ type TextAnnotation = {
         color: string;
     };
     decision: string;
+    state?: string;
 }
 
 export type { BinaryAnnotation, TextAnnotation };

@@ -1,7 +1,7 @@
 from uuid import UUID
 from django.shortcuts import get_object_or_404
 from rest_framework import views, permissions, response, status
-from annotations.models import BinaryAnnotationsModel, TextAnnotationsModel
+from annotations.models import BinaryAnnotationsModel, TextAnnotationsModel, ExtractionAnnotationsModel
 from decisions.models import DatasetsDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
 from .serializers import BinaryAnnotationsSerializer, TextAnnotationsCreateSerializer, TextAnnotationsSerializer
@@ -11,7 +11,8 @@ from ai_models.models import Ai_ModelsModel, AiModelTrainingsModel
 from users import services
 from ai_models.serializers import AiModelSerializer, AiModelTrainingSerializer
 from users.serializers import UserSerializer
-
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.views import APIView
 
 
 class BinDatasetRawDecisionsView(views.APIView):
@@ -142,9 +143,50 @@ class FetchAnnotationsWithValidationStateView(views.APIView):
         raw_decisions = [decision.raw_decision for decision in dataset_decisions]
 
         raw_decisions_serializer = RawDecisionsSerializer(raw_decisions, many=True).data
-        raw_decisions_serializer.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
+        # raw_decisions_serializer.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
+
+        # Build a mapping from raw_decision id to its order in the sorted list
+        raw_decision_id_order = {rd['id']: idx for idx, rd in enumerate(raw_decisions_serializer)}
+        # Sort annotations to match the order of raw_decisions
+        serialized_annotations.sort(
+            key=lambda ann: raw_decision_id_order.get(ann['decision'], float('inf'))
+        )
+
         return response.Response({
             "raw_decisions": raw_decisions_serializer,
             "annotations": serialized_annotations
         }
             , status=status.HTTP_200_OK)
+
+class ExtractiveUsersWithAnnotationsView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        user_ids = TextAnnotationsModel.objects.filter( decision__dataset_id=dataset_id).values_list("creator__id", flat=True).distinct()
+        users = ScriberUsers.objects.filter(id__in=user_ids)
+        serialized_users = UserSerializer(users, many=True).data
+        return response.Response(serialized_users, status=status.HTTP_200_OK)
+
+class ExtractiveModelsWithAnnotationsView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        model_names = ExtractionAnnotationsModel.objects.filter(
+            decision__dataset_id=dataset_id,
+            model_annotator__isnull=False
+        ).values_list("model_annotator", flat=True).distinct()
+        model_names = [model_name for model_name in model_names if model_name is not None]
+        model_names = list(set(model_names))
+        return response.Response(model_names, status=status.HTTP_200_OK)
+
+class ValidateDecisionAnnotationsView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def patch(self, request, decision_id):
+        # Bulk update all text annotations for the decision to validated
+        annotations = TextAnnotationsModel.objects.filter(decision_id=decision_id, deleted=False)
+        updated_count = annotations.update(state="validated")
+        return response.Response({"updated": updated_count}, status=status.HTTP_200_OK)

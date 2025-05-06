@@ -30,7 +30,7 @@ class TextAnnotationsSerializer(serializers.ModelSerializer):
     label = serializers.SlugRelatedField(slug_field='id', read_only=True)
     class Meta:
         model = TextAnnotationsModel
-        fields = ['id', 'text', 'start_offset', 'end_offset', 'label', 'decision']
+        fields = ['id', 'text', 'start_offset', 'end_offset', 'label', 'decision', 'state']
 
 # Serializer for creating TextAnnotations
 class TextAnnotationsCreateSerializer(serializers.ModelSerializer):
@@ -42,7 +42,8 @@ class TextAnnotationsCreateSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         annotation = TextAnnotationsModel.objects.create(
             creator=user,
-            **validated_data
+            **validated_data,
+            state='annotated',
         )
         return annotation
 

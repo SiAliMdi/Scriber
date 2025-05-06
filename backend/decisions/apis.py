@@ -51,7 +51,7 @@ class BinDatasetRawDecisionsView(views.APIView):
 
         # Sérialisation des décisions
         raw_decisions_serializer = RawDecisionsSerializer(raw_decisions, many=True)
-        raw_decisions_serializer.data.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
+        # raw_decisions_serializer.data.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
         # Optimisation : Récupérer toutes les annotations de l'utilisateur en une seule requête
         annotations = BinaryAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,

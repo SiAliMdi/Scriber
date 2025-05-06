@@ -13,6 +13,7 @@ import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
 import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
 import BinAnnotationValidation from './pages/BinAnnotationValidation'
 import { useToast } from "@/components/ui/use-toast"; // adjust import as needed
+import ExtractiveAnnotationValidation from './pages/ExtractiveAnnotationValidation'
 
 const  App: React.FC = () => {
     const { toast } = useToast();
@@ -47,6 +48,7 @@ const  App: React.FC = () => {
                     <Route path='/annoter_bin/:id' element={<BinaryAnnotationPage/>}/>
                     <Route path='/annoter_ext/:id' element={<ExtractiveAnnotationPage/>}/>
                     <Route path='/validate/:datasetId' element={<BinAnnotationValidation/>}/>
+                    <Route path='/validate_extractive/:datasetId' element={<ExtractiveAnnotationValidation/>}/>
                 </Routes>
             </Router>
             

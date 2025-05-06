@@ -7,6 +7,8 @@ docker run -p $TYPESENSE_PORT:$TYPESENSE_IN_PORT \
             --data-dir /data \
             --api-key=$TYPESENSE_API_KEY \
             --enable-cors \
+            --filter-by-max-ops 500\
+            --max-per-page 1000 \
             > "$dir"/logs/typesense/out.log \
             2> "$dir"/logs/typesense/error.err 
 

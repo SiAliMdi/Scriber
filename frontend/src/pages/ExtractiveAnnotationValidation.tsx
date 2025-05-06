@@ -3,17 +3,17 @@ import BasePage from "./BasePage";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Trash2 } from 'lucide-react';
+import { Settings, Trash2, Check } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLocation } from "react-router-dom";
-import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions } from "@/services/ExtractiveAnnotationServices";
+import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions, validateDecisionAnnotations } from "@/services/ExtractiveAnnotationServices";
 import { fetchLabels } from "@/services/LabelsServices";
 import { Decision } from "@/@types/decision";
 import { TextAnnotation } from "@/@types/annotations";
 import { Label as LabelType } from "@/@types/label";
 import LabelsDialog from "@/components/annotation-forms/extractive/LabelsDialog";
 
-const ExtractiveAnnotationPage: React.FC = () => {
+const ExtractiveAnnotationValidation: React.FC = () => {
     const [decisions, setDecisions] = useState<Decision[]>([]);
     const [annotations, setAnnotations] = useState<Record<string, TextAnnotation[]>>({});
     const [totalAnnotationCounts, setTotalAnnotationCounts] = useState<Record<string, number>>({});
@@ -66,6 +66,7 @@ const ExtractiveAnnotationPage: React.FC = () => {
             setCurrentLabel(labels[0]);
         }
     }, [labels, currentLabel]);
+
     useEffect(() => {
         if (!selectedDecision) return;
 
@@ -223,6 +224,36 @@ const ExtractiveAnnotationPage: React.FC = () => {
             .catch(console.error);
     };
 
+    // Validate all annotations for the selected decision
+    const handleValidateDecision = async () => {
+        if (!selectedDecision) return;
+        const anns = annotations[selectedDecision.id] || [];
+        if (anns.length === 0) return;
+        try {
+            await validateDecisionAnnotations(selectedDecision.id);
+            // Update local state
+            setAnnotations(prev => ({
+                ...prev,
+                [selectedDecision.id]: prev[selectedDecision.id].map(a => ({ ...a, state: "validated" })),
+            }));
+            // Move to next decision
+            goToNextDecision();
+        } catch (err) {
+            console.error("Validation failed", err);
+        }
+    };
+
+    // Helper to determine decision color
+    const getDecisionStateColor = (decisionId: string) => {
+        const anns = annotations[decisionId] || [];
+        for (const ann of anns) {
+            console.log("Annotation state:", ann.state); // Debug log
+        }
+        if (anns.length === 0) return "bg-gray-100";
+        if (anns.every(a => a.state === "validated")) return "bg-green-100";
+        return "bg-blue-100";
+    };
+
 
     const handleDeleteSelected = () => {
         const decisionIdsToDelete = Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]);
@@ -320,22 +351,35 @@ const ExtractiveAnnotationPage: React.FC = () => {
                         <span className="text-sm">
                             {decisions.findIndex(d => d.id === selectedDecision?.id) + 1}/{decisions.length}
                         </span>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={handleDeleteSelected}
-                            disabled={!Object.values(checkedDecisions).some(v => v)}
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleValidateDecision}
+                                disabled={
+                                    !selectedDecision ||
+                                    !(annotations[selectedDecision.id]?.length > 0) ||
+                                    annotations[selectedDecision.id]?.every(a => a.state === "validated")
+                                }
+                                title="Valider la décision"
+                            >
+                                {"Validate "} <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleDeleteSelected}
+                                disabled={!Object.values(checkedDecisions).some(v => v)}
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                     <ScrollArea className="flex-1 p-2 overflow-auto" ref={scrollAreaRef}>
                         {decisions.map((decision, idx) => (
                             <div
                                 key={decision.id}
-                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""
-                                    } ${annotations[decision.id]?.length > 0 ? "text-green-600 font-medium" : "text-gray-500"
-                                    }`}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id)}`}
                                 onClick={() => handleDecisionClick(decision)}
                                 ref={(el) => (decisionRefs.current[idx] = el)}
                             >
@@ -428,4 +472,4 @@ const ExtractiveAnnotationPage: React.FC = () => {
     );
 };
 
-export default ExtractiveAnnotationPage;
+export default ExtractiveAnnotationValidation;

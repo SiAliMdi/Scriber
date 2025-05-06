@@ -12,21 +12,20 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
-import { fetchUsersWithAnnotations, fetchTrainedModelsForDataset } from "@/services/ValidationServices";
+import { fetchExtractiveUsersWithAnnotations, fetchExtractiveModelsWithAnnotations } from "@/services/ExtractiveAnnotationServices";
 import { User } from "@/@types/user";
-import AiModel, { Training } from "@/@types/ai-model";
+import AiModel from "@/@types/ai-model";
 
-interface ValidationDialogProps {
+interface ExtValidationDialogProps {
   datasetId: string;
   datasetSerialNumber: string;
   categoryId: string;
 }
 
-const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: ValidationDialogProps) => {
+const ExtValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: ExtValidationDialogProps) => {
   const [validationMethod, setValidationMethod] = useState<"manual" | "model">("manual");
   const [users, setUsers] = useState<User[]>([]);
-  const [models, setModels] = useState<AiModel[]>([]);
-  const [trainedModels, setTrainedModels] = useState<Training[]>([]);
+  const [models, setModels] = useState<string[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [selectedModel, setSelectedModel] = useState<string>("");
   const { toast } = useToast();
@@ -34,12 +33,9 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
 
   useEffect(() => {
     if (validationMethod === "manual") {
-      fetchUsersWithAnnotations(datasetId).then(setUsers);
+      fetchExtractiveUsersWithAnnotations(datasetId).then(setUsers);
     } else if (validationMethod === "model") {
-      fetchTrainedModelsForDataset(datasetId).then((data) => {
-        setModels(data.models);
-        setTrainedModels(data.trained_models);
-      });
+      fetchExtractiveModelsWithAnnotations(datasetId).then(setModels);
     }
   }, [validationMethod, datasetId]);
 
@@ -53,7 +49,7 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
         });
         return;
       }
-      navigate(`/validate/${datasetId}`, {
+      navigate(`/validate_extractive/${datasetId}`, {
         state: {
           datasetId,
           datasetSerialNumber,
@@ -61,7 +57,6 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
           selectedModel: null,
         },
       });
-
     } else if (validationMethod === "model") {
       if (!selectedModel) {
         toast({
@@ -71,7 +66,7 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
         });
         return;
       }
-      navigate(`/validate/${datasetId}`, {
+      navigate(`/validate_extractive/${datasetId}`, {
         state: {
           datasetId,
           datasetSerialNumber,
@@ -86,7 +81,7 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <span className="hover:cursor-pointer">Valider les annotations</span>
+        <span className="hover:cursor-pointer block">Valider les annotations extractives</span>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
@@ -112,7 +107,6 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
               <select
                 value={selectedUser}
                 onChange={(e) => setSelectedUser(e.target.value)}
-
                 className="w-full p-2 border rounded-md"
               >
                 <option value="" disabled>
@@ -138,10 +132,9 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
                 <option value="" disabled>
                   -- Sélectionner un modèle --
                 </option>
-                {trainedModels.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {models.find((m) => m.id === model.modelId)?.name || "Unknown Model"} - {model.type} -{" "}
-                    {new Date(model.updated_at).toLocaleDateString()}
+                {models.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
                   </option>
                 ))}
               </select>
@@ -156,4 +149,4 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Valida
   );
 };
 
-export default ValidationDialog;
+export default ExtValidationDialog;

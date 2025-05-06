@@ -14,7 +14,7 @@ class AnnotationsModel(models.Model):
     state = models.CharField(
         max_length=12,
         choices=VALIDATION_STATES,
-        default='unannotated',
+        default='annotated',
         blank=True,
         null=True,
     )
@@ -22,7 +22,7 @@ class AnnotationsModel(models.Model):
     start_offset = models.IntegerField(blank=True, null=True, default=-1)
     end_offset = models.IntegerField(blank=True, null=True, default=-1)
     label = models.ForeignKey('datasets.Labels', on_delete=models.DO_NOTHING, related_name='label_annotation', blank=False, null=False)
-    state = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=True, null=True, default='annotated')
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='decision_annotation', blank=True, null=True)
     # to add: annotator (user) or (model)
     # human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='user_annotator', blank=True, null=True)

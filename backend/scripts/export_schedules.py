@@ -16,20 +16,15 @@ from decisions.tasks import export_ca_decisions_daily_task
 from datetime import datetime
 from time import sleep
 
-# execute the task every day at 14:20 pm
-
 while True:
     # Get the current time in UTC
     datetime_now = datetime.now()
-    print(f"Current time: {(datetime_now.hour)}:{datetime_now.minute}")
-    print(f"Scheduled time: {(settings.JUDILIBRE_EXPORT_HOUR)}:{settings.JUDILIBRE_EXPORT_MINUTE}")
     
-    # Check if the current time is 14:20 UTC
     if str(datetime_now.hour) == str(settings.JUDILIBRE_EXPORT_HOUR) \
         and str(datetime_now.minute) == str(settings.JUDILIBRE_EXPORT_MINUTE):
             
+        print(f"Current time: {(datetime_now.hour)}:{datetime_now.minute}")
         # Call the task function
-        print("Executing task...")
         export_ca_decisions_daily_task()
         print("Task executed.")
 
