@@ -29,7 +29,7 @@ type TextAnnotation = {
 type ExtractionAnnotations = {
     id: string; // UUID
     decision: string; // UUID of DatasetsDecisionsModel
-    llm_json_result?: JSONObject;
+    llm_json_result?: string; //JSONObject;
     model_annotator?: string;
     state?: string;
     creator: string; // UUID of ScriberUsers

@@ -99,6 +99,7 @@ class ExtractionAnnotationsModel(models.Model):
     model_annotator = models.CharField(max_length=50, blank=True, null=True)
     state = models.CharField(max_length=12, blank=True, null=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_creator', blank=False, null=False)
+    updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_updater', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     class Meta(AnnotationsModel.Meta):

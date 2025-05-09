@@ -20,3 +20,16 @@ urlpatterns = [
     path("extractive/models_with_annotations/<str:dataset_id>/", apis.ExtractiveModelsWithAnnotationsView.as_view(), name="extractive_models_with_annotations"),
     path("ext_annotation/validate_decision/<uuid:decision_id>/", apis.ValidateDecisionAnnotationsView.as_view(), name="validate_decision_annotations"),
 ]
+
+urlpatterns += [
+    path(
+        "extractive/llm_decisions_with_annotations/<str:dataset_id>/",
+        apis.DecisionsWithLLMExtractionsView.as_view(),
+        name="extractive_llm_decisions_with_annotations"
+    ),
+    path(
+        "extractive/llm_extraction/<uuid:extraction_id>/",
+        apis.ExtractionAnnotationUpdateView.as_view(),
+        name="extractive_llm_extraction_update"
+    ),
+]

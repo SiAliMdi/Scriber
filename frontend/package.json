@@ -33,6 +33,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "json-edit-react": "^1.26.2",
+    "jsonrepair": "^3.12.0",
     "lodash": "^4.17.21",
     "lucide-react": "^0.428.0",
     "react": "^18.3.1",

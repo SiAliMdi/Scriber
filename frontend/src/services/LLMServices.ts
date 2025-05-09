@@ -1,12 +1,15 @@
 import {
   ExtractionAnnotations,
-  ExtractionTextAnnotation,
 } from "@/@types/annotations";
+import { Decision } from "@/@types/decision";
+import { JSONObject } from "@/@types/prompt";
 import axios from "axios";
 
-export interface LLMExtractionAnnotationsResponse {
-  extractions: ExtractionAnnotations[];
-  extraction_texts: ExtractionTextAnnotation[];
+
+
+export interface DecisionWithExtraction {
+  decision: Decision;
+  extraction: ExtractionAnnotations | null;
 }
 
 export async function fetchLLMExtractionAnnotations(
@@ -30,4 +33,49 @@ export async function fetchLLMExtractionAnnotations(
     }
   );
   return res.data;
+}
+
+export async function fetchDecisionsWithLLMExtractions(
+  datasetId: string,
+  modelAnnotator: string
+): Promise<DecisionWithExtraction[]> {
+  const token = sessionStorage.getItem("token");
+  const res = await axios.get(
+    `${
+      import.meta.env.VITE_BACKEND_APP_API_URL
+    }annotations/extractive/llm_decisions_with_annotations/${datasetId}/`,
+    {
+      headers: {
+        Authorization: `${token}`,
+        "Content-Type": "application/json",
+      },
+      params: {
+        model_annotator: modelAnnotator,
+      },
+    }
+  );
+  return res.data;
+}
+
+export async function saveExtractionValidation(
+  extractionId: string,
+  llm_json_result: JSONObject,
+  state: string
+): Promise<void> {
+  const token = sessionStorage.getItem("token");
+  await axios.patch(
+    `${
+      import.meta.env.VITE_BACKEND_APP_API_URL
+    }annotations/extractive/llm_extraction/${extractionId}/`,
+    {
+      llm_json_result,
+      state,
+    },
+    {
+      headers: {
+        Authorization: `${token}`,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 }

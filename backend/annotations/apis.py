@@ -1,3 +1,4 @@
+import json
 from uuid import UUID
 from django.shortcuts import get_object_or_404
 from rest_framework import views, permissions, response, status
@@ -209,8 +210,6 @@ class ValidateDecisionAnnotationsView(views.APIView):
         return response.Response({"updated": updated_count}, status=status.HTTP_200_OK)
 
 
-# ...existing code...
-
 from .serializers import ExtractionAnnotationsSerializer
 from datetime import datetime, timedelta
 
@@ -240,5 +239,85 @@ class ExtractionAnnotationsByModelView(views.APIView):
             return response.Response(serializer.data, status=status.HTTP_200_OK)
         except ValueError:
             return response.Response({"error": "Invalid date format, should be yyyy-mm-dd hh:mm"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return response.Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class DecisionsWithLLMExtractionsView(APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        select = request.GET.get("model_annotator")
+        if not select or "||" not in select:
+            return response.Response({"error": "Missing or invalid model_annotator"}, status=status.HTTP_400_BAD_REQUEST)
+        model_annotator = select.split("||")[0].strip()
+        created_at_filter = select.split("||")[1].strip()
+        if not model_annotator or not created_at_filter:
+            return response.Response({"error": "Missing model_annotator or created_at"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            dt = datetime.strptime(created_at_filter, "%Y-%m-%d %H:%M")
+            dt_end = dt + timedelta(minutes=1)
+        except ValueError:
+            return response.Response({"error": "Invalid date format, should be yyyy-mm-dd hh:mm"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Get all decisions for the dataset
+        decisions = DatasetsDecisionsModel.objects.filter(dataset=dataset_id, deleted=False)
+
+        # Get all extractions for this model/date
+        extractions = ExtractionAnnotationsModel.objects.filter(
+            decision__in=decisions,
+            model_annotator=model_annotator,
+            created_at__gte=dt,
+            created_at__lt=dt_end
+        )
+        extractions_by_decision = {e.decision_id: e for e in extractions}
+
+        # Build response
+        result = []
+        for decision in decisions:
+            extraction = extractions_by_decision.get(decision.id)
+            
+            result.append({
+                "decision": {
+                    "id": decision.id,
+                    "j_texte": decision.raw_decision.texte_net,
+                    "j_chambre": decision.raw_decision.j_chambre,
+                    "j_date": decision.raw_decision.j_date,
+                    "j_rg": decision.raw_decision.j_rg,
+                    "j_ville": decision.raw_decision.j_ville,
+                    "j_type": decision.raw_decision.j_type,
+                    "j_juridiction": decision.raw_decision.j_juridiction,
+                },
+                "extraction": ExtractionAnnotationsSerializer(extraction).data if extraction else None
+            })
+        return response.Response(result, status=status.HTTP_200_OK)
+    
+    
+class ExtractionAnnotationUpdateView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def patch(self, request, extraction_id):
+        try:
+            extraction = ExtractionAnnotationsModel.objects.get(id=extraction_id)
+            llm_json_result = request.data.get("llm_json_result")
+            state = request.data.get("state")
+            # convert llm_json_result to JSON if it's a string
+            if isinstance(llm_json_result, str):
+                try:
+                    llm_json_result = json.loads(llm_json_result)
+                    print("llm converted to JSON")
+                except json.JSONDecodeError:
+                    return response.Response({"error": "Invalid JSON format"}, status=status.HTTP_400_BAD_REQUEST)
+            if llm_json_result is not None:
+                extraction.llm_json_result = llm_json_result
+            if state:
+                extraction.state = state
+            extraction.updater = request.user
+            extraction.save()
+            print("extraction updated",llm_json_result)
+            return response.Response({"message": "Extraction updated"}, status=status.HTTP_200_OK)
+        except ExtractionAnnotationsModel.DoesNotExist:
+            return response.Response({"error": "Extraction not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return response.Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
