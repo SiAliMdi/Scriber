@@ -493,51 +493,53 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
         
         # Now create ExtractionTextAnnotationsModel for each key-value in the JSON
         for extraction_ann in created_extraction_annotations:
-            
-            llm_json = json.loads(extraction_ann.llm_json_result) or {}
-            
+            try:
+                llm_json = json.loads(extraction_ann.llm_json_result)
+            except json.JSONDecodeError:
+                llm_json = str(extraction_ann.llm_json_result)
             decision_text = await get_decision_text_from_extraction_ann(extraction_ann)
+            if type(llm_json) is dict:
+                for key, value in llm_json.items():
+                    
+                    if not isinstance(value, str):
+                        all_text_annotations.append(
+                            ExtractionTextAnnotationsModel(
+                                extraction=extraction_ann,
+                                text=value,
+                                start_offset=-1,
+                                end_offset=-1,
+                                label=key,
+                            )
+                        )
+                        continue
+                    # Find all occurrences of value in decision_text for offsets
+                    matches = [m for m in re.finditer(re.escape(value), decision_text)]
+                    if matches:
+                        # for match in matches:
+                        all_text_annotations.append(
+                            ExtractionTextAnnotationsModel(
+                                extraction=extraction_ann,
+                                text=value,
+                                start_offset=matches[0].start(),
+                                end_offset=matches[0].end(),
+                                label=key,
+                            )
+                        )
+                    else:
+                        # If not found, store with -1 offsets
+                        all_text_annotations.append(
+                            ExtractionTextAnnotationsModel(
+                                extraction=extraction_ann,
+                                text=value,
+                                start_offset=-1,
+                                end_offset=-1,
+                                label=key,
+                            )
+                        )
             
-            for key, value in llm_json.items():
-                
-                if not isinstance(value, str):
-                    all_text_annotations.append(
-                        ExtractionTextAnnotationsModel(
-                            extraction=extraction_ann,
-                            text=value,
-                            start_offset=-1,
-                            end_offset=-1,
-                            label=key,
-                        )
-                    )
-                    continue
-                # Find all occurrences of value in decision_text for offsets
-                matches = [m for m in re.finditer(re.escape(value), decision_text)]
-                if matches:
-                    # for match in matches:
-                    all_text_annotations.append(
-                        ExtractionTextAnnotationsModel(
-                            extraction=extraction_ann,
-                            text=value,
-                            start_offset=matches[0].start(),
-                            end_offset=matches[0].end(),
-                            label=key,
-                        )
-                    )
-                else:
-                    # If not found, store with -1 offsets
-                    all_text_annotations.append(
-                        ExtractionTextAnnotationsModel(
-                            extraction=extraction_ann,
-                            text=value,
-                            start_offset=-1,
-                            end_offset=-1,
-                            label=key,
-                        )
-                    )
-        
-        # Bulk create ExtractionTextAnnotationsModel
+            # Bulk create ExtractionTextAnnotationsModel
         await sync_to_async(ExtractionTextAnnotationsModel.objects.bulk_create)(all_text_annotations)
+        all_text_annotations.clear()
         
         await self.send_annotation_complete("Annotations extractives enregistrées avec succès.")
         # close the connection

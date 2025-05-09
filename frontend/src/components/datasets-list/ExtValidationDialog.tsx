@@ -66,7 +66,7 @@ const ExtValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: Ext
         });
         return;
       }
-      navigate(`/validate_extractive/${datasetId}`, {
+      navigate(`/validate_llm_extractive/${datasetId}`, {
         state: {
           datasetId,
           datasetSerialNumber,

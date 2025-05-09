@@ -1,10 +1,10 @@
 from uuid import UUID
 from django.shortcuts import get_object_or_404
 from rest_framework import views, permissions, response, status
-from annotations.models import BinaryAnnotationsModel, TextAnnotationsModel, ExtractionAnnotationsModel
+from annotations.models import BinaryAnnotationsModel, ExtractionTextAnnotationsModel, TextAnnotationsModel, ExtractionAnnotationsModel
 from decisions.models import DatasetsDecisionsModel
 from decisions.serializers import RawDecisionsSerializer
-from .serializers import BinaryAnnotationsSerializer, TextAnnotationsCreateSerializer, TextAnnotationsSerializer
+from .serializers import BinaryAnnotationsSerializer, TextAnnotationsCreateSerializer, TextAnnotationsSerializer, ExtractionTextAnnotationsSerializer
 from users.models import ScriberUsers
 from datasets.models import Labels
 from ai_models.models import Ai_ModelsModel, AiModelTrainingsModel
@@ -173,13 +173,30 @@ class ExtractiveModelsWithAnnotationsView(views.APIView):
     permission_classes = (permissions.IsAuthenticated,)
 
     def get(self, request, dataset_id):
-        model_names = ExtractionAnnotationsModel.objects.filter(
+        from django.db.models.functions import TruncMinute
+
+        # Annotate created_at to minute precision
+        qs = ExtractionAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
             model_annotator__isnull=False
-        ).values_list("model_annotator", flat=True).distinct()
-        model_names = [model_name for model_name in model_names if model_name is not None]
-        model_names = list(set(model_names))
-        return response.Response(model_names, status=status.HTTP_200_OK)
+        ).annotate(
+            created_minute=TruncMinute('created_at')
+        ).values(
+            'model_annotator', 'created_minute'
+        ).distinct()
+
+        # Format the datetime as string
+        result = [ f"{row['model_annotator']} || {row['created_minute'].strftime('%Y-%m-%d %H:%M')}" if row["created_minute"] else None
+            for row in qs ]
+        result = list(set(result))  # Remove duplicates
+        #     {
+        #         "model_annotator": row["model_annotator"],
+        #         "created_at": row["created_minute"].strftime("%Y-%m-%d %H:%M")
+        #         if row["created_minute"] else None
+        #     }
+        #     for row in qs
+        # ]
+        return response.Response(result, status=status.HTTP_200_OK)
 
 class ValidateDecisionAnnotationsView(views.APIView):
     authentication_classes = (services.ScriberUserAuthentication,)
@@ -190,3 +207,38 @@ class ValidateDecisionAnnotationsView(views.APIView):
         annotations = TextAnnotationsModel.objects.filter(decision_id=decision_id, deleted=False)
         updated_count = annotations.update(state="validated")
         return response.Response({"updated": updated_count}, status=status.HTTP_200_OK)
+
+
+# ...existing code...
+
+from .serializers import ExtractionAnnotationsSerializer
+from datetime import datetime, timedelta
+
+class ExtractionAnnotationsByModelView(views.APIView):
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        select = request.GET.get("model_annotator")
+        if not select or "||" not in select:
+            return response.Response({"error": "Missing or invalid model_annotator"}, status=status.HTTP_400_BAD_REQUEST)
+        model_annotator = select.split("||")[0].strip()
+        created_at_filter = select.split("||")[1].strip()
+        if not model_annotator or not created_at_filter:
+            return response.Response({"error": "Missing model_annotator or created_at"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            # Parse the datetime string
+            dt = datetime.strptime(created_at_filter, "%Y-%m-%d %H:%M")
+            dt_end = dt + timedelta(minutes=1)
+            extractions = ExtractionAnnotationsModel.objects.filter(
+                decision__dataset=dataset_id,
+                model_annotator=model_annotator,
+                created_at__gte=dt,
+                created_at__lt=dt_end
+            ).prefetch_related("extraction_text")
+            serializer = ExtractionAnnotationsSerializer(extractions, many=True)
+            return response.Response(serializer.data, status=status.HTTP_200_OK)
+        except ValueError:
+            return response.Response({"error": "Invalid date format, should be yyyy-mm-dd hh:mm"}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return response.Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

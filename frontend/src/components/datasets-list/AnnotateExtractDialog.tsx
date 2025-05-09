@@ -52,7 +52,6 @@ const AnnotateExtractDialog = ({ categoryId, datasetId, datasetSerialNumber }: A
       )}&dataset_id=${encodeURIComponent(datasetId)}&model_id=${encodeURIComponent(aiModel)}&prompt_id=${encodeURIComponent(selectedPrompt?.id || "vide")}`;
       const ws = new WebSocket(url);
       
-      console.log("Token: 2 ", token);
       ws.onopen = () => {
         const payload = { datasetId, modelId: aiModel, prompt: selectedPrompt };
         ws.send(JSON.stringify(payload));

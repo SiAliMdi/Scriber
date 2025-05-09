@@ -220,7 +220,7 @@ def mistral_inference(decision_texts, prompt_text=None, json_template=None):
                 print(f"Error: {e}")
 
     pbar.close()
-    print(f"Responses: {responses}")
+    
     return responses
 
 @sync_to_async(thread_sensitive=False)
@@ -279,7 +279,7 @@ def llama_inference(decision_texts, prompt_text=None, json_template=None):
                 print(f"Error: {e}")
 
     pbar.close()
-    print(f"Responses: {responses}")
+    
     return responses
 
 

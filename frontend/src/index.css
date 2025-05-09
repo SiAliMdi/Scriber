@@ -57,13 +57,15 @@
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
   }
-}
 
-@layer base {
   * {
-    @apply border-border;
+    /* Optionally set a default border color using your custom variable: */
+    border-color: hsl(var(--border));
   }
   body {
-    @apply bg-background text-foreground;
+    /* Use custom properties directly for background and text color */
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    /* You can still use @apply for other utilities if needed */
   }
 }

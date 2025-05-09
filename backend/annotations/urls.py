@@ -4,6 +4,11 @@ from . import apis
 app_name = "annotations"
 
 urlpatterns = [
+    path(
+        "extractive/llm_annotations/<str:dataset_id>/",
+        apis.ExtractionAnnotationsByModelView.as_view(),
+        name="extractive_llm_annotations_by_model"
+    ),
     path("bin_annotation/<str:annotation_id>/", apis.BinDatasetRawDecisionsView.as_view(), name="bin_annotations"),
     path("ext_annotation/", apis.ExtAnnotationCreateView.as_view(), name="ext_annotations_new"),
     path("ext_annotation/<str:annotation_id>/", apis.ExtAnnotationDeleteView.as_view(), name="ext_annotations_del"),

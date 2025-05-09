@@ -3,17 +3,18 @@ import BasePage from "./BasePage";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Settings, Trash2, Check } from 'lucide-react';
+import { Trash2, Check, Menu } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useLocation } from "react-router-dom";
 import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions, validateDecisionAnnotations } from "@/services/ExtractiveAnnotationServices";
 import { fetchLabels } from "@/services/LabelsServices";
 import { Decision } from "@/@types/decision";
-import { TextAnnotation } from "@/@types/annotations";
+import { ExtractionAnnotations, ExtractionTextAnnotation, TextAnnotation } from "@/@types/annotations";
 import { Label as LabelType } from "@/@types/label";
-import LabelsDialog from "@/components/annotation-forms/extractive/LabelsDialog";
+import { fetchLLMExtractionAnnotations, LLMExtractionAnnotationsResponse } from "@/services/LLMServices";
+import { JsonEditor } from 'json-edit-react'
 
-const ExtractiveAnnotationValidation: React.FC = () => {
+const LLMAnnotationValidation: React.FC = () => {
     const [decisions, setDecisions] = useState<Decision[]>([]);
     const [annotations, setAnnotations] = useState<Record<string, TextAnnotation[]>>({});
     const [totalAnnotationCounts, setTotalAnnotationCounts] = useState<Record<string, number>>({});
@@ -23,13 +24,30 @@ const ExtractiveAnnotationValidation: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [labels, setLabels] = useState<LabelType[]>([]);
     const [currentLabel, setCurrentLabel] = useState<LabelType | null>(null);
-    const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [showDecisionsPanel, setShowDecisionsPanel] = useState(false);
+
+    // Draggable hamburger button state
+    const [btnPos, setBtnPos] = useState({ x: 16, y: 16 });
+    const [dragging, setDragging] = useState(false);
+    const dragOffset = useRef({ x: 0, y: 0 });
 
     const location = useLocation();
     const datasetId = location.state?.datasetId;
 
     const scrollAreaRef = useRef<HTMLDivElement>(null);
     const decisionRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+    const [llmExtractions, setLlmExtractions] = useState<ExtractionAnnotations[] | null>(null);
+
+    useEffect(() => {
+        if (datasetId && location.state?.selectedModel) {
+            fetchLLMExtractionAnnotations(datasetId, location.state.selectedModel)
+                .then(setLlmExtractions)
+                .catch((err) => {
+                    setError("Error fetching LLM extractions: " + err);
+                });
+        }
+    }, [datasetId, location.state?.selectedModel]);
 
     // Fetch data on mount
     useEffect(() => {
@@ -338,138 +356,161 @@ const ExtractiveAnnotationValidation: React.FC = () => {
         }, 500);
     };
 
+    // Draggable handlers
+    const handleDragStart = (e: React.MouseEvent) => {
+        setDragging(true);
+        dragOffset.current = {
+            x: e.clientX - btnPos.x,
+            y: e.clientY - btnPos.y,
+        };
+        // Prevent text selection while dragging
+        document.body.style.userSelect = "none";
+    };
+
+    const handleDrag = (e: MouseEvent) => {
+        if (!dragging) return;
+        setBtnPos({
+            x: e.clientX - dragOffset.current.x,
+            y: e.clientY - dragOffset.current.y,
+        });
+    };
+
+    const handleDragEnd = () => {
+        setDragging(false);
+        document.body.style.userSelect = "";
+    };
+
+    useEffect(() => {
+        if (dragging) {
+            window.addEventListener("mousemove", handleDrag);
+            window.addEventListener("mouseup", handleDragEnd);
+        } else {
+            window.removeEventListener("mousemove", handleDrag);
+            window.removeEventListener("mouseup", handleDragEnd);
+        }
+        return () => {
+            window.removeEventListener("mousemove", handleDrag);
+            window.removeEventListener("mouseup", handleDragEnd);
+        };
+    }, [dragging]);
+
     if (loading) return <div className="p-4 text-center mt-10"><strong>Chargement des décisions...</strong></div>;
     if (error) return <div className="p-4 text-red-500 text-center mt-10"><strong>{error}</strong></div>;
 
     return (
         <div className="h-screen flex flex-col">
             <BasePage />
-            <div className="flex flex-1 overflow-hidden">
-                {/* Decisions Panel */}
-                <div className="w-64 border-r flex flex-col">
-                    <div className="p-2 border-b flex items-center justify-between">
-                        <span className="text-sm">
-                            {decisions.findIndex(d => d.id === selectedDecision?.id) + 1}/{decisions.length}
-                        </span>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleValidateDecision}
-                                disabled={
-                                    !selectedDecision ||
-                                    !(annotations[selectedDecision.id]?.length > 0) ||
-                                    annotations[selectedDecision.id]?.every(a => a.state === "validated")
-                                }
-                                title="Valider la décision"
-                            >
-                                {"Valider "} <Check className="h-4 w-4 text-green-600" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleDeleteSelected}
-                                disabled={!Object.values(checkedDecisions).some(v => v)}
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
+            <div className="flex-1 flex flex-col relative">
+                {/* Draggable Hamburger Button */}
+                <button
+                    className="fixed z-20 bg-white border rounded-md p-2 shadow hover:bg-gray-100 cursor-move"
+                    style={{
+                        top: btnPos.y,
+                        left: btnPos.x,
+                        transition: dragging ? "none" : "top 0.2s, left 0.2s",
+                    }}
+                    onMouseDown={handleDragStart}
+                    onClick={() => setShowDecisionsPanel((prev) => !prev)}
+                    title={showDecisionsPanel ? "Masquer la liste des décisions" : "Afficher la liste des décisions"}
+                    type="button"
+                >
+                    <Menu className="w-6 h-6" />
+                </button>
+                <div className="flex flex-1 h-full">
+                    {/* Decisions Panel (toggleable) */}
+                    {showDecisionsPanel && (
+                        <div className="w-64 border-r flex flex-col bg-white z-10 relative">
+                            <div className="p-2 border-b flex items-center justify-between">
+                                <span className="text-sm">
+                                    {decisions.findIndex(d => d.id === selectedDecision?.id) + 1}/{decisions.length}
+                                </span>
+                                <div className="flex gap-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleValidateDecision}
+                                        disabled={
+                                            !selectedDecision ||
+                                            !(annotations[selectedDecision.id]?.length > 0) ||
+                                            annotations[selectedDecision.id]?.every(a => a.state === "validated")
+                                        }
+                                        title="Valider la décision"
+                                    >
+                                        {"Valider "} <Check className="h-4 w-4 text-green-600" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={handleDeleteSelected}
+                                        disabled={!Object.values(checkedDecisions).some(v => v)}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </div>
+                            <ScrollArea className="flex-1 p-2 overflow-auto" ref={scrollAreaRef}>
+                                {decisions.map((decision, idx) => (
+                                    <div
+                                        key={decision.id}
+                                        className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id)}`}
+                                        onClick={() => handleDecisionClick(decision)}
+                                        ref={(el) => (decisionRefs.current[idx] = el)}
+                                    >
+                                        <Checkbox
+                                            checked={checkedDecisions[decision.id] || false}
+                                            onCheckedChange={(checked) =>
+                                                setCheckedDecisions(prev => ({
+                                                    ...prev,
+                                                    [decision.id]: !!checked
+                                                }))
+                                            }
+                                        />
+                                        <p className="break-words">
+                                            <strong>{idx + 1}.</strong> {decision.j_juridiction}-{decision.j_ville}-{decision.j_date}-{decision.j_rg}
+                                            {annotations[decision.id]?.length > 0 && (
+                                                <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                                                    {annotations[decision.id].length} annotation(s)
+                                                </span>
+                                            )}
+                                        </p>
+                                    </div>
+                                ))}
+                            </ScrollArea>
                         </div>
-                    </div>
-                    <ScrollArea className="flex-1 p-2 overflow-auto" ref={scrollAreaRef}>
-                        {decisions.map((decision, idx) => (
-                            <div
-                                key={decision.id}
-                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id)}`}
-                                onClick={() => handleDecisionClick(decision)}
-                                ref={(el) => (decisionRefs.current[idx] = el)}
-                            >
-                                <Checkbox
-                                    checked={checkedDecisions[decision.id] || false}
-                                    onCheckedChange={(checked) =>
-                                        setCheckedDecisions(prev => ({
-                                            ...prev,
-                                            [decision.id]: !!checked
-                                        }))
-                                    }
-                                />
-                                <p className="break-words">
-                                    <strong>{idx + 1}.</strong> {decision.j_juridiction}-{decision.j_ville}-{decision.j_date}-{decision.j_rg}
-                                    {annotations[decision.id]?.length > 0 && (
-                                        <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                            {annotations[decision.id].length} annotation(s)
-                                        </span>
+                    )}
+
+                    {/* Main Panel: Decision Text */}
+                    <div className="flex-1 flex flex-col m-4 transition-all duration-300 overflow-auto">
+                        <Card className="flex-1 flex flex-col">
+                            <CardContent className="flex flex-col h-full p-0">
+                                <ScrollArea className="flex-1 p-2 overflow-auto">
+                                    {selectedDecision ? (
+                                        <div
+                                            className="decision-text whitespace-pre-wrap"
+                                            onMouseUp={handleTextSelection}
+                                            dangerouslySetInnerHTML={{ __html: selectedDecision.j_texte || "Aucun texte disponible." }}
+                                        />
+                                    ) : (
+                                        <div className="p-4 text-center">Sélectionnez une décision pour en afficher le texte.</div>
                                     )}
-                                </p>
-                            </div>
-                        ))}
-                    </ScrollArea>
+                                </ScrollArea>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* LLM Annotations Panel */}
+                    <div className="flex-1 min-w-0 border-l flex flex-col bg-gray-50 p-4 overflow-auto">
+                        <h3 className="text-lg font-semibold mb-4">Annotations LLM extraites</h3>
+                        <JsonEditor
+                        data={ llmExtractions }
+                        // setData={ setJsonData } // optional
+                        className="overflow-auto"
+                        />
+                    </div>
                 </div>
-
-                {/* Main Panel */}
-                <Card className="flex-1 flex flex-col m-4">
-                    <CardContent className="flex flex-col h-full p-0">
-                        {/* Headers Container */}
-                        <div className="sticky top-0 z-20 bg-white">
-                            {/* Total Annotation Counts */}
-                            <div className="p-2 border-b flex justify-start">
-                                <h3 className="text-lg font-semibold mr-8">Total des annotations</h3>
-                                <div className="flex space-x-4">
-                                    {labels.map((label) => (
-                                        <div key={label.id} className="flex items-center">
-                                            <span className="mr-2" style={{ color: label.color }}>●</span>
-                                            <span>{label.label}: {totalAnnotationCounts[label.id] || 0}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Labels and Settings */}
-                            <div className="p-2 border-b flex items-center">
-                                <Settings
-                                    className="h-6 w-6 cursor-pointer mr-4"
-                                    onClick={() => setIsDialogOpen(true)}
-                                />
-                                <LabelsDialog
-                                    open={isDialogOpen}
-                                    onOpenChange={setIsDialogOpen}
-                                    labels={labels}
-                                    setLabels={setLabels}
-                                    datasetId={datasetId}
-                                    datasetSerialNumber={location.state?.datasetSerialNumber}
-                                />
-                                <div className="flex space-x-2 overflow-x-auto">
-                                    {labels.map((label) => (
-                                        <button
-                                            key={label.id}
-                                            style={{ backgroundColor: label.color }}
-                                            onClick={() => setCurrentLabel(label)}
-                                            className={`px-3 py-1 rounded border transition-colors duration-200 whitespace-nowrap ${currentLabel?.id === label.id ? "border-blue-500 shadow-lg font-bold" : "border-transparent"
-                                                }`}
-                                        >
-                                            {label.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Scrollable Decision Text */}
-                        <ScrollArea className="flex-1 p-2">
-                            {selectedDecision ? (
-                                <div
-                                    className="decision-text whitespace-pre-wrap"
-                                    onMouseUp={handleTextSelection}
-                                    dangerouslySetInnerHTML={{ __html: selectedDecision.j_texte || "Aucun texte disponible." }}
-                                />
-                            ) : (
-                                <div className="p-4 text-center">Sélectionnez une décision pour en afficher le texte.</div>
-                            )}
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );
 };
 
-export default ExtractiveAnnotationValidation;
+export default LLMAnnotationValidation;

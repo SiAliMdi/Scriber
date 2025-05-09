@@ -468,7 +468,7 @@ const ExtractiveLLMAnnotationValidationInner: React.FC<any> = (props) => {
                                 }
                                 title="Valider la décision"
                             >
-                                {"Validate "} <Check className="h-4 w-4 text-green-600" />
+                                {"Valider "} <Check className="h-4 w-4 text-green-600" />
                             </Button>
                             <Button
                                 variant="ghost"
