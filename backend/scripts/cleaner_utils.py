@@ -1,6 +1,6 @@
 import re
 import unicodedata as ud
-from cleantext import clean
+from cleantext.clean import clean  # <-- FIXED IMPORT
 import json
 
 mois = "(janvier|février|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)"
@@ -105,11 +105,11 @@ def normalize_text(text, tcp=False):
     text = ud.normalize('NFD', text)
     text = clean(
         text,
-        # fix_unicode=True,
-        # to_ascii=False,
-        # lower=False,
-        # normalize_whitespace=False,
-        # lang="fr"
+        fix_unicode=True,
+        to_ascii=False,
+        lower=False,
+        normalize_whitespace=False,
+        lang="fr"
     )
 
     if tcp:

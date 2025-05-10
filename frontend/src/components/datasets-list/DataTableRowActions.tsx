@@ -15,6 +15,7 @@ import AnnotateDialog from "./AnnotateBinDialog";
 import AnnotateExtractDialog from "./AnnotateExtractDialog";
 import { useLocation, useNavigate } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
+import ExtValidationDialog from './ExtValidationDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -44,6 +45,7 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
           <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
+            
           <AnnotateDialog
             categoryId={location.state.categoryId}
             datasetId={row.original.id}
@@ -54,16 +56,14 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
             datasetId={row.original.id}
             datasetSerialNumber={row.original.serialNumber}
           />
-          {/* <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/annoter_ext/${row.original.id}`,
-            {
-              state: {
-                datasetId: row.original.id,
-                datasetSerialNumber: row.original.serialNumber,
-                labels : row.original.labels,
-              }
-            })} >Annoter Extractif</DropdownMenuItem> */}
 
           <ValidationDialog
+            datasetId={row.original.id}
+            datasetSerialNumber={row.original.serialNumber}
+            categoryId={location.state.categoryId}
+          />
+
+          <ExtValidationDialog
             datasetId={row.original.id}
             datasetSerialNumber={row.original.serialNumber}
             categoryId={location.state.categoryId}

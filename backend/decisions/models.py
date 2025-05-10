@@ -35,7 +35,7 @@ class RawDecisionsModel(DecisionsModel):
             models.Index(fields=['j_nac'],),
             models.Index(fields=['j_type'],),
         ]
-    
+        ordering = ['-j_date', '-j_ville', ]
     def save(self, *args, **kwargs):
         self.clean()
         if RawDecisionsModel.objects.filter(j_id=self.j_id).exists():
@@ -59,4 +59,5 @@ class DatasetsDecisionsModel(models.Model):
             models.Index(fields=['dataset',]),
             models.Index(fields=['raw_decision',]),
         ]
-        ordering = ['add_date']
+        # ordering = ['add_date']
+        ordering = ['-raw_decision__j_date', '-raw_decision__j_ville', ]

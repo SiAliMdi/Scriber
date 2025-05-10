@@ -1,3 +1,5 @@
+import { JSONObject } from "./prompt";
+
 type BinaryAnnotation = {
     id?: string,
     model_annotator?: string,
@@ -21,6 +23,27 @@ type TextAnnotation = {
         color: string;
     };
     decision: string;
+    state?: string;
 }
 
-export type { BinaryAnnotation, TextAnnotation };
+type ExtractionAnnotations = {
+    id: string; // UUID
+    decision: string; // UUID of DatasetsDecisionsModel
+    llm_json_result?: string; //JSONObject;
+    model_annotator?: string;
+    state?: string;
+    creator: string; // UUID of ScriberUsers
+    created_at: string; // ISO timestamp
+    updated_at: string; // ISO timestamp
+  };
+  
+  type ExtractionTextAnnotation = {
+    id: string; // UUID
+    extraction: string; // UUID of ExtractionAnnotations
+    text?: string;
+    start_offset?: number;
+    end_offset?: number;
+    label?: string;
+  };
+  
+export type { BinaryAnnotation, TextAnnotation, ExtractionAnnotations, ExtractionTextAnnotation };

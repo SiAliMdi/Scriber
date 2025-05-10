@@ -51,7 +51,7 @@ class BinDatasetRawDecisionsView(views.APIView):
 
         # Sérialisation des décisions
         raw_decisions_serializer = RawDecisionsSerializer(raw_decisions, many=True)
-        raw_decisions_serializer.data.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
+        # raw_decisions_serializer.data.sort(key=lambda x: x['j_ville']+x['j_date'], reverse=True)
         # Optimisation : Récupérer toutes les annotations de l'utilisateur en une seule requête
         annotations = BinaryAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
@@ -264,3 +264,35 @@ class Associer(views.APIView):
         dataset.size = DatasetsDecisionsModel.objects.filter(dataset=dataset).count()
         dataset.save()
         return response.Response(data={"message": "Decision associated successfully"}, status=200)
+
+class LLMDatasetDecisionsDeleteView(views.APIView):
+    authentication_classes = (users_services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def delete(self, request, dataset_id):
+        decisions_ids = request.data.get("decisionsIds", [])
+        model_annotator = request.data.get("modelAnnotator", "")
+        if not decisions_ids or not model_annotator:
+            return response.Response({"error": "Missing decisionsIds or modelAnnotator"}, status=400)
+        model_name, created_at = model_annotator.split("||")
+        model_name = model_name.strip()
+        created_at = created_at.strip()
+        from datetime import datetime, timedelta
+        try:
+            dt = datetime.strptime(created_at, "%Y-%m-%d %H:%M")
+            dt_end = dt + timedelta(minutes=1)
+        except Exception:
+            return response.Response({"error": "Invalid created_at format"}, status=400)
+        # Mark decisions as deleted
+        deleted_count = DatasetsDecisionsModel.objects.filter(
+            id__in=decisions_ids, dataset__id=dataset_id
+        ).update(deleted=True)
+        # Mark related LLM extractions as deleted for this model and time
+        from annotations.models import ExtractionAnnotationsModel
+        ExtractionAnnotationsModel.objects.filter(
+            decision_id__in=decisions_ids,
+            model_annotator=model_name,
+            created_at__gte=dt,
+            created_at__lt=dt_end
+        ).update(deleted=True)
+        return response.Response({"message": f"{deleted_count} decisions and their LLM annotations marked as deleted"}, status=200)

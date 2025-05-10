@@ -10,6 +10,7 @@ const host = process.env.FRONTEND_HOST;
 const port = Number(process.env.FRONTEND_PORT);
 
 export default defineConfig({
+  // import postcss from 'vite-plugin-postcss';
   plugins: [react()],
   server: {
     host,

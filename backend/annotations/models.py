@@ -14,7 +14,7 @@ class AnnotationsModel(models.Model):
     state = models.CharField(
         max_length=12,
         choices=VALIDATION_STATES,
-        default='unannotated',
+        default='annotated',
         blank=True,
         null=True,
     )
@@ -22,7 +22,7 @@ class AnnotationsModel(models.Model):
     start_offset = models.IntegerField(blank=True, null=True, default=-1)
     end_offset = models.IntegerField(blank=True, null=True, default=-1)
     label = models.ForeignKey('datasets.Labels', on_delete=models.DO_NOTHING, related_name='label_annotation', blank=False, null=False)
-    state = models.CharField(max_length=255, blank=True, null=True)
+    state = models.CharField(max_length=255, blank=True, null=True, default='annotated')
     decision = models.ForeignKey('decisions.DatasetsDecisionsModel', on_delete=models.DO_NOTHING, related_name='decision_annotation', blank=True, null=True)
     # to add: annotator (user) or (model)
     # human_annotator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='user_annotator', blank=True, null=True)
@@ -99,8 +99,10 @@ class ExtractionAnnotationsModel(models.Model):
     model_annotator = models.CharField(max_length=50, blank=True, null=True)
     state = models.CharField(max_length=12, blank=True, null=True)
     creator = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_creator', blank=False, null=False)
+    updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_updater', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted = models.BooleanField(default=False)
     class Meta(AnnotationsModel.Meta):
         db_table = "extraction_annotations"
 

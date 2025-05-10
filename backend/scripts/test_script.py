@@ -32,9 +32,6 @@ def authenticate_judilibre():
 
 
 def connect_to_typesense(connection_timeout_seconds : int = 6000):
-    print("host : ", settings.TYPESENSE_HOST)
-    print("port : ", settings.TYPESENSE_PORT)
-    print("api_key : ", settings.TYPESENSE_API_KEY)
     client = typesense.Client({
         'nodes': [{
             'host': settings.TYPESENSE_HOST,
@@ -66,8 +63,29 @@ def get_typesense_collection(client: typesense.Client):
         })
     return data_collection
 
+def delete_collection(client):
+    try:
+        client.collections[settings.TYPESENSE_COLLECTION_NAME].delete()
+        print("Collection deleted successfully.")
+    except typesense.exceptions.ObjectNotFound:
+        print("Collection not found, nothing to delete.")
+        
 t_client = connect_to_typesense()
 # c= get_typesense_collection(t_client)
 # print(c)
-collections = t_client.collections.retrieve()
-print(collections)
+collections = t_client.collections.retrieve()[0]
+print("Collections:", collections)
+# delete_collection(t_client)
+
+
+# Get the first document from the collection
+""" try:
+    search_result = t_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.search({
+        "q": "*",
+        "query_by": "j_rg",
+        "per_page": 250
+    })
+    first_doc = search_result['hits'][100]['document'] if search_result['hits'] else None
+    print("First document:", first_doc['j_texte'])
+except Exception as e:
+    print("Error fetching first document:", e) """
