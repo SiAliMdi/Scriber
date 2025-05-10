@@ -79,3 +79,22 @@ export async function saveExtractionValidation(
     }
   );
 }
+
+
+export const deleteLLMDatasetDecisions = async (
+  datasetId: string,
+  decisionsIds: string[],
+  modelAnnotator: string
+) => {
+  const token = sessionStorage.getItem("token");
+  return axios.delete(
+    `${
+      import.meta.env.VITE_BACKEND_APP_API_URL
+    }decisions/llm_dataset/${datasetId}/all/`,
+    {
+      headers: { Authorization: `${token}` },
+      withCredentials: true,
+      data: { decisionsIds, modelAnnotator },
+    }
+  );
+};

@@ -102,6 +102,7 @@ class ExtractionAnnotationsModel(models.Model):
     updater = models.ForeignKey('users.ScriberUsers', on_delete=models.DO_NOTHING, related_name='extraction_annotations_updater', blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    deleted = models.BooleanField(default=False)
     class Meta(AnnotationsModel.Meta):
         db_table = "extraction_annotations"
 

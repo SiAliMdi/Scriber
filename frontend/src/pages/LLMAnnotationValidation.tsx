@@ -3,7 +3,7 @@ import BasePage from "./BasePage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Menu } from 'lucide-react';
 import { useLocation } from "react-router-dom";
-import { fetchDecisionsWithLLMExtractions, DecisionWithExtraction, saveExtractionValidation } from "@/services/LLMServices";
+import { fetchDecisionsWithLLMExtractions, DecisionWithExtraction, saveExtractionValidation, deleteLLMDatasetDecisions } from "@/services/LLMServices";
 import { JsonEditor } from 'json-edit-react';
 import { jsonrepair } from 'jsonrepair'
 
@@ -14,7 +14,7 @@ const LLMAnnotationValidation: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showDecisionsPanel, setShowDecisionsPanel] = useState(false);
-
+    const [checkedDecisions, setCheckedDecisions] = useState<Record<string, boolean>>({});
     // For editing JSON
     const [editedJson, setEditedJson] = useState<any>(null);
 
@@ -72,6 +72,32 @@ const LLMAnnotationValidation: React.FC = () => {
         });
     };
 
+        const handleDeleteSelected = async () => {
+        const decisionIdsToDelete = Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]);
+        if (!decisionIdsToDelete.length) return;
+        try {
+            await deleteLLMDatasetDecisions(
+                datasetId,
+                decisionIdsToDelete,
+                location.state.selectedModel
+            );
+            // Remove deleted decisions from state
+            const remaining = decisionsWithExtractions.filter(
+                d => !decisionIdsToDelete.includes(d.decision.id)
+            );
+            setDecisionsWithExtractions(remaining);
+            setCheckedDecisions({});
+            // Adjust selectedIndex if needed
+            setSelectedIndex(prev => {
+                if (remaining.length === 0) return 0;
+                if (prev >= remaining.length) return remaining.length - 1;
+                return prev;
+            });
+        } catch (error) {
+            alert("Erreur lors de la suppression des décisions.");
+        }
+    };
+
     const handleDragEnd = () => {
         setDragging(false);
         document.body.style.userSelect = "";
@@ -91,9 +117,10 @@ const LLMAnnotationValidation: React.FC = () => {
         };
     }, [dragging]);
 
-    // Handle 'v' key for validation
+    // Handle 'v' key for validation and move to next decision
     useEffect(() => {
         const handleKeyDown = async (e: KeyboardEvent) => {
+            // Validate and move to next on 'v'
             if (e.key === 'v' || e.key === 'V') {
                 const selected = decisionsWithExtractions[selectedIndex];
                 if (selected && selected.extraction) {
@@ -103,7 +130,6 @@ const LLMAnnotationValidation: React.FC = () => {
                             editedJson,
                             "validated"
                         );
-                        // Update state locally
                         setDecisionsWithExtractions(prev =>
                             prev.map((item, idx) =>
                                 idx === selectedIndex
@@ -112,7 +138,6 @@ const LLMAnnotationValidation: React.FC = () => {
                                         extraction: item.extraction
                                             ? {
                                                 ...item.extraction,
-                                                // llm_json_result: JSON.stringify(editedJson),
                                                 llm_json_result: editedJson,
                                                 state: "validated"
                                             }
@@ -121,10 +146,25 @@ const LLMAnnotationValidation: React.FC = () => {
                                     : item
                             )
                         );
+                        setSelectedIndex(prev =>
+                            prev + 1 < decisionsWithExtractions.length ? prev + 1 : 0
+                        );
                     } catch (err) {
                         alert("Erreur lors de la validation de l'annotation LLM.");
                     }
                 }
+            }
+            // Next decision: right or up arrow
+            if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                setSelectedIndex(prev =>
+                    prev + 1 < decisionsWithExtractions.length ? prev + 1 : 0
+                );
+            }
+            // Previous decision: left or down arrow
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                setSelectedIndex(prev =>
+                    prev - 1 >= 0 ? prev - 1 : decisionsWithExtractions.length - 1
+                );
             }
         };
         window.addEventListener("keydown", handleKeyDown);
@@ -165,6 +205,24 @@ const LLMAnnotationValidation: React.FC = () => {
                 {/* Panels */}
                 {showDecisionsPanel && (
                     <div className="w-64 border-r flex flex-col bg-white z-10 h-full">
+                        {/* Indicator line and Trash Icon */}
+                        <div className="w-full flex items-center justify-between text-xs py-1 bg-gray-100 border-b sticky top-0 z-10 px-2">
+                            <span>
+                                {decisionsWithExtractions.length > 0
+                                    ? `Décision ${selectedIndex + 1} / ${decisionsWithExtractions.length}`
+                                    : "Aucune décision"}
+                            </span>
+                            <button
+                                className={`ml-2 p-1 rounded ${Object.values(checkedDecisions).some(Boolean) ? "text-red-600 hover:bg-red-100" : "text-gray-400 cursor-not-allowed"}`}
+                                disabled={!Object.values(checkedDecisions).some(Boolean)}
+                                title="Supprimer les décisions sélectionnées"
+                                onClick={handleDeleteSelected}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2" />
+                                </svg>
+                            </button>
+                        </div>
                         <div className="flex-1 overflow-y-auto">
                             {decisionsWithExtractions.map((item, idx) => (
                                 <div
@@ -172,6 +230,17 @@ const LLMAnnotationValidation: React.FC = () => {
                                     className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${getDecisionColor(item, idx)}`}
                                     onClick={() => setSelectedIndex(idx)}
                                 >
+                                    <input
+                                        type="checkbox"
+                                        checked={checkedDecisions[item.decision.id] || false}
+                                        onChange={e =>
+                                            setCheckedDecisions(prev => ({
+                                                ...prev,
+                                                [item.decision.id]: e.target.checked
+                                            }))
+                                        }
+                                        onClick={e => e.stopPropagation()}
+                                    />
                                     <p className="break-words">
                                         <strong>{idx + 1}.</strong> {item.decision.j_juridiction}-{item.decision.j_ville}-{item.decision.j_date}-{item.decision.j_rg}
                                     </p>

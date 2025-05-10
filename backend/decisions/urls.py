@@ -18,3 +18,11 @@ urlpatterns = [
     path("villes/", apis.VillesListView.as_view(), name="get_villes"),
     path("associer/", apis.Associer.as_view(), name="get_chambres"),
 ]
+
+urlpatterns += [
+    path(
+        "llm_dataset/<str:dataset_id>/all/",
+        apis.LLMDatasetDecisionsDeleteView.as_view(),
+        name="llm_dataset_decisions_delete"
+    ),
+]
