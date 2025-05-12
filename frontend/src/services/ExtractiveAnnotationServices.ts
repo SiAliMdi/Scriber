@@ -30,7 +30,7 @@ export const fetchTextDecisionsWithAnnotations = async (
 
     const { decisions, total_annotation_counts } =
       response.data;
-
+    console.log("decisions 1", decisions);
     const mappedDecisions: Decision[] = decisions.map(
       (decision: any) => ({
         id: decision.id,
