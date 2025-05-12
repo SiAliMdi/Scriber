@@ -296,3 +296,18 @@ class LLMDatasetDecisionsDeleteView(views.APIView):
             created_at__lt=dt_end
         ).update(deleted=True)
         return response.Response({"message": f"{deleted_count} decisions and their LLM annotations marked as deleted"}, status=200)
+
+
+class LogDatasetDownloadView(views.APIView):
+    authentication_classes = (users_services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        dataset_id = request.data.get("dataset_id")
+        file_name = request.data.get("file_name")
+        user = request.user
+        # Save to your logging model/table as needed
+        # Example:
+        # DatasetDownloadLog.objects.create(user=user, dataset_id=dataset_id, file_name=file_name)
+        print(f"User {user} downloaded {file_name} from dataset {dataset_id}")
+        return response.Response({"message": "Download logged"}, status=200)

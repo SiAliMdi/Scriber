@@ -39,7 +39,6 @@ export const fetchBinDecisionsWithAnnotations = async (
 ) => {
   const token = sessionStorage.getItem("token");
   try {
-    console.log("Fetching decisions and annotations... V", annotator);
     let response;
     if (annotator || trained_model_annotator) {
       
