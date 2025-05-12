@@ -188,10 +188,13 @@ def export_ca_decisions(start_date: datetime= None, end_date: datetime= None):
         nonlocal batch_size
         nonlocal logger
         
-        decisions_batch = get_query_response(access_token, export_url, export_params)
-        insert_decisions_batch(decisions_batch, batch_size, typesense_client, logger, export_params["batch"])
-        
-        logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']}, contenant {len(decisions_batch['results']) }/{decisions_batch['total'] } décisions, a été traité.")
+        try:
+            decisions_batch = get_query_response(access_token, export_url, export_params)
+            insert_decisions_batch(decisions_batch, batch_size, typesense_client, logger, export_params["batch"])
+            logger.info(f"Le batch {export_params['batch']} de la période du {export_params['date_start']} au {export_params['date_end']}, contenant {len(decisions_batch['results']) }/{decisions_batch['total'] } décisions, a été traité.")
+        except Exception as e:
+            logger.info(f"Erreur lors du batch {decisions_batch}")
+            
         
     def delete_unmatched_decisions():
         t1 = time()

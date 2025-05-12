@@ -16,6 +16,7 @@ import AnnotateExtractDialog from "./AnnotateExtractDialog";
 import { useLocation, useNavigate } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
 import ExtValidationDialog from './ExtValidationDialog';
+import DownloadDatasetDialog from './DownloadDatasetDialog';
 
 interface DataTableRowActionsProps<TData> {
   row: Row<TData>;
@@ -69,6 +70,10 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
             categoryId={location.state.categoryId}
           />
 
+          <DownloadDatasetDialog
+            datasetId={row.original.id}
+            datasetName={row.original.name || row.original.serialNumber}
+          />
         </DropdownMenuContent>
       </DropdownMenu>
     </div>
