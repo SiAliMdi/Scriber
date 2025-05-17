@@ -113,7 +113,7 @@ export function DataTable<TData, TValue>({
                   data-state={row.getIsSelected() && "selected"}
                   // define edit row function
                   onDoubleClick={() => {
-                    console.log("Edit row:", row.original)
+                    //console.log("Edit row:", row.original)
                   }}
                 >
                   {row.getVisibleCells().map((cell) => (

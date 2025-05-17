@@ -18,6 +18,7 @@ import { fetchBinDecisionsWithAnnotations, fetchTrainedModelsForDataset, fetchUs
 import { Decision } from "@/@types/decision";
 import { BinaryAnnotation, TextAnnotation } from "@/@types/annotations";
 import { fetchDecisionsWithLLMExtractions } from "@/services/LLMServices";
+import axios from "axios";
 
 interface DownloadDatasetDialogProps {
   datasetId: string;
@@ -44,7 +45,8 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
   const [llms, setllms] = useState<string[]>([]);
   const [selectedUserLLM, setSelectedUserLLM] = useState<string>("");
   const [selectedLLM, setSelectedLLM] = useState<string>("");
-  const [totalAnnotations, settotalAnnotations] = useState<Record<string, number>>( {});
+  const [totalAnnotations, settotalAnnotations] = useState<Record<string, number>>({});
+  // const [data, setData] = useState<any>([]);
 
   useEffect(() => {
     fetchUsersWithAnnotations(datasetId).then(setUsersBin);
@@ -56,6 +58,92 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
     fetchExtractiveModelsWithAnnotations(datasetId).then(setllms);
   }, [datasetId]);
 
+    
+
+    const fetchBinDecisionsWithAnnotationsDirect = async (
+    datasetId: string,
+    annotator: string,
+    trained_model_annotator: string
+  ): Promise<Array<Decision & { annotations: BinaryAnnotation[] }>> => {
+    const token = sessionStorage.getItem("token");
+    try {
+      if (!annotator && !trained_model_annotator) return [];
+  
+      const response = await axios.get(
+        `${import.meta.env.VITE_BACKEND_APP_API_URL}annotations/validation/${datasetId}/`,
+        {
+          headers: { Authorization: `${token}` },
+          params: {
+            annotator,
+            trained_model_annotator,
+          },
+          withCredentials: true,
+        }
+      );
+  
+      // Map decisions with their annotations
+      const decisions = response.data.raw_decisions.map((decision: any) => {
+        const decisionAnnotations = response.data.annotations
+          .filter((ann: any) => ann.decision === decision.id)
+          .map((annotation: any) => ({
+            id: annotation.id,
+            label: annotation.label,
+            decisionId: annotation.decision,
+            state: annotation.state,
+            creator: annotation.creator,
+            model_annotator: annotation.model_annotator,
+            trainedModelAnnotator: annotation.trained_model_annotator,
+            updated_at: annotation.updated_at,
+          }));
+  
+        return {
+          id: decision.id,
+          j_texte: decision.texte_net,
+          j_chambre: decision.j_chambre,
+          j_date: decision.j_date,
+          j_rg: decision.j_rg,
+          j_ville: decision.j_ville,
+          j_type: decision.j_type,
+          j_juridiction: decision.j_juridiction,
+          annotations: decisionAnnotations,
+        };
+      });
+  
+      return decisions;
+    } catch (error) {
+      console.error("Error fetching decisions and annotations:", error);
+      return [];
+    }
+  };
+
+  const fetchTextDecisionsWithAnnotationsDirect = async (datasetId: string) => {
+    const token = sessionStorage.getItem("token");
+    const response = await fetch(
+      `${import.meta.env.VITE_BACKEND_APP_API_URL}decisions/ext_dataset/${datasetId}/all/`,
+      {
+        headers: { Authorization: `${token}` },
+        credentials: "include",
+      }
+    );
+    const { decisions: rawDecisions } = await response.json();
+
+    const mappedDecisions = rawDecisions.map((decision: any) => ({
+      id: decision.id,
+      j_texte: decision.raw_decision.texte_net,
+      j_chambre: decision.raw_decision.j_chambre,
+      j_date: decision.raw_decision.j_date,
+      j_rg: decision.raw_decision.j_rg,
+      j_ville: decision.raw_decision.j_ville,
+      j_type: decision.raw_decision.j_type,
+      j_juridiction: decision.raw_decision.j_juridiction,
+      annotations: (decision.annotations || []).map(
+        ({ decision, ...rest }: any) => rest
+      ),
+    }));
+
+    return mappedDecisions;
+  };
+
   const handleDownload = async () => {
     let fileName = `${datasetName}_`;
     let data: any[] = [];
@@ -64,39 +152,20 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
       if (annotationType === "binary") {
         if (annotationSource === "manual") {
           // Fetch binary manual annotations for selected user
-          await fetchBinDecisionsWithAnnotations(
-            datasetId,
-            selectedBinUser,
-            selectedBinModel,
-            setDecisions,
-            setBinAnnotations,
-
-          );
-          data = decisions.map((decision: any) => {
-            const anns = binAnnotations.filter((a: any) => a.decisionId === decision.id);
-            return {
-              ...decision,
-              annotations: anns.map(({ decisionId, ...rest }: any) => rest),
-            };
-          });
-          fileName += `bin_manual_${selectedBinUser}_`;
+          data = await fetchBinDecisionsWithAnnotationsDirect(
+          datasetId,
+          selectedBinUser,
+          ""
+        );
+        fileName += `bin_manual_${selectedBinUser}_`;
         } else {
           // Fetch binary model annotations for selected model
-          await fetchBinDecisionsWithAnnotations(
-            datasetId,
-            selectedBinUser,
-            selectedBinModel,
-            setDecisions,
-            setBinAnnotations
-          );
-          data = decisions.map((decision: any) => {
-            const anns = binAnnotations.filter((a: any) => a.decisionId === decision.id);
-            return {
-              ...decision,
-              annotations: anns.map(({ decisionId, ...rest }: any) => rest),
-            };
-          });
-          fileName += `bin_model_${selectedBinModel}_`;
+          data = await fetchBinDecisionsWithAnnotationsDirect(
+          datasetId,
+          "",
+          selectedBinModel
+        );
+        fileName += `bin_model_${selectedBinModel}_`;
         }
       } else if (annotationType === "extractive") {
         if (annotationSource === "manual") {
@@ -107,19 +176,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
             setManExtAnnotations,
             settotalAnnotations,
           );
-          console.log("decisions", decisions);
-          data = decisions.map((decision: any) => {
-            const anns = (manExtAnnotations[decision.id] || []);
-            return {
-              ...decision,
-              annotations: anns.map(
-                ({ decisionId, ...rest }: any) => {
-                  console.log("rest", rest);
-                  return rest}
-
-              ),
-            };
-          });
+          data = await fetchTextDecisionsWithAnnotationsDirect(datasetId);
           fileName += `extractive_manual_${selectedUserLLM}_`;
         } else {
           // Fetch LLM/model extractive annotations for selected model
@@ -136,12 +193,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
       }
     } else {
       // Decisions only
-      await fetchTextDecisionsWithAnnotations(datasetId,
-        setDecisions,
-        () => { },
-        () => { }
-      );
-      data = decisions;
+      data = await fetchTextDecisionsWithAnnotationsDirect(datasetId);
       fileName += `decisions_`;
     }
 
@@ -161,6 +213,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
 
     setOpen(false);
   };
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -257,8 +310,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
                   <Label>Sélectionner un utilisateur</Label>
                   <select
                     value={selectedBinUser}
-                    onChange={(e) =>
-                      {return setselectedBinUser(e.target.value)}}
+                    onChange={(e) => { return setselectedBinUser(e.target.value) }}
                     className="w-full p-2 border rounded-md"
                   >
                     <option value="" disabled>
