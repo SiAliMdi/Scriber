@@ -2,7 +2,7 @@ from requests import request
 import typesense 
 import os
 import sys
-
+from tqdm import tqdm
 # Get the project base directory (one level up from scripts folder)
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -14,7 +14,8 @@ sys.path.append(BASE_DIR)
 import django
 django.setup()
 from django.conf import settings
-
+from decisions.models import RawDecisionsModel
+from tiktoken import encoding_for_model, get_encoding
 
 def authenticate_judilibre():
     oauth_url = "https://sandbox-oauth.piste.gouv.fr/api/oauth/token"
@@ -70,22 +71,31 @@ def delete_collection(client):
     except typesense.exceptions.ObjectNotFound:
         print("Collection not found, nothing to delete.")
         
-t_client = connect_to_typesense()
-# c= get_typesense_collection(t_client)
-# print(c)
-collections = t_client.collections.retrieve()[0]
-print("Collections:", collections)
-# delete_collection(t_client)
+def calculate_decisions_tokens():
+    decisions = RawDecisionsModel.objects.all()
+    print(f"Number of decisions: {len(decisions)}")
+    tokens_counts = []
+    # name = "llama-2-70b-chat-hf"
+    for decision in tqdm(decisions):
+        tokens = encoding_for_model("gpt-4o").encode(decision.texte_net)
+        tokens_counts.append(len(tokens))        
+    
+    print(f"Tokens counts: {tokens_counts}")
+    avg = sum(tokens_counts) / len(tokens_counts)
+    print(f"Average tokens: {avg}")
+    min_tokens = min(tokens_counts)
+    max_tokens = max(tokens_counts)
+    print(f"Max tokens: {max_tokens}")
+    print(f"Min tokens: {min_tokens}")
+    # count the min value of the tokens
+    print(f"Min tokens: {tokens_counts.count(min_tokens)}")
+    print(f"Max tokens: {tokens_counts.count(max_tokens)}")
+    print(f"Avg tokens: {tokens_counts.count(avg)}")
+    
 
+def main():
+    calculate_decisions_tokens()
 
-# Get the first document from the collection
-""" try:
-    search_result = t_client.collections[settings.TYPESENSE_COLLECTION_NAME].documents.search({
-        "q": "*",
-        "query_by": "j_rg",
-        "per_page": 250
-    })
-    first_doc = search_result['hits'][100]['document'] if search_result['hits'] else None
-    print("First document:", first_doc['j_texte'])
-except Exception as e:
-    print("Error fetching first document:", e) """
+if __name__ == "__main__":
+    main()
+    

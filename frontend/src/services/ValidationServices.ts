@@ -54,7 +54,7 @@ export const fetchBinDecisionsWithAnnotations = async (
         }
       );
     } else return;
-    console.log("Response data:", response.data);
+    
     // Extract decisions
     const decisions: Decision[] = response.data.raw_decisions.map(
       (decision: {

@@ -1,4 +1,3 @@
-import { JSONObject } from "./prompt";
 
 type BinaryAnnotation = {
     id?: string,
