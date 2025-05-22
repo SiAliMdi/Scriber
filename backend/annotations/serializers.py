@@ -53,7 +53,7 @@ class ExtractionTextAnnotationsSerializer(serializers.ModelSerializer):
         fields = ['id', 'extraction', 'text', 'start_offset', 'end_offset', 'label']
 
 class ExtractionAnnotationsSerializer(serializers.ModelSerializer):
-    extraction_text = ExtractionTextAnnotationsSerializer(many=True, read_only=True)
+    # extraction_text = ExtractionTextAnnotationsSerializer(many=True, read_only=True)
     class Meta:
         model = ExtractionAnnotationsModel
-        fields = ['id', 'decision', 'llm_json_result', 'model_annotator', 'state', 'creator', 'created_at', 'updated_at', 'extraction_text']
+        fields = ['id', 'decision', 'llm_json_result', 'model_annotator', 'state', 'creator', 'created_at', 'updated_at']

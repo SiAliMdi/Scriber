@@ -45,7 +45,6 @@ const AnnotateExtractDialog = ({ categoryId, datasetId, datasetSerialNumber }: A
       window.location.reload();
     } else if (annotationMethod === "model" && aiModel) {
       const token = sessionStorage.getItem("token") || "";
-      console.log("Token:", token);
       // Note: Update the path to point to the new extract annotation endpoint
       const url = `${import.meta.env.VITE_WEB_SOCKET_URL}ws/extract_annotation/notifications/?token=${encodeURIComponent(
         token
