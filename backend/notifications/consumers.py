@@ -464,7 +464,7 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
         batches = [list(zip(decisions, decision_texts))[i:i + batch_size] for i in range(0, len(decision_texts), batch_size)]
         
         all_extraction_annotations = []
-        all_text_annotations = []
+        # all_text_annotations = []
 
         for batch in batches:
             batch_decisions, batch_texts = zip(*batch)
@@ -488,8 +488,9 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
                 all_extraction_annotations.append(extraction_ann)
 
         # Bulk create ExtractionAnnotationsModel and refresh to get IDs
-        created_extraction_annotations = await sync_to_async(ExtractionAnnotationsModel.objects.bulk_create)(all_extraction_annotations)
-        await sync_to_async(lambda: [ann.refresh_from_db() for ann in created_extraction_annotations])()
+        await sync_to_async(ExtractionAnnotationsModel.objects.bulk_create)(all_extraction_annotations)
+        # created_extraction_annotations = await sync_to_async(ExtractionAnnotationsModel.objects.bulk_create)(all_extraction_annotations)
+        """ await sync_to_async(lambda: [ann.refresh_from_db() for ann in created_extraction_annotations])()
         
         # Now create ExtractionTextAnnotationsModel for each key-value in the JSON
         for extraction_ann in created_extraction_annotations:
@@ -536,10 +537,10 @@ class ExtractAnnotationNotificationConsumer(AsyncWebsocketConsumer):
                                 label=key,
                             )
                         )
-            
+        """    
             # Bulk create ExtractionTextAnnotationsModel
-        await sync_to_async(ExtractionTextAnnotationsModel.objects.bulk_create)(all_text_annotations)
-        all_text_annotations.clear()
+        # await sync_to_async(ExtractionTextAnnotationsModel.objects.bulk_create)(all_text_annotations)
+        # all_text_annotations.clear()
         
         await self.send_annotation_complete("Annotations extractives enregistrées avec succès.")
         # close the connection
