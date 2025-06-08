@@ -16,7 +16,14 @@ JWT_SECRET = getenv('JWT_SECRET')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = getenv('DEBUG') == 'True'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', 'localhost').split(',')
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = (a for a in getenv('SECURE_PROXY_SSL_HEADER', '').split(',') if a)
+    SECURE_SSL_REDIRECT = getenv('SECURE_SSL_REDIRECT') == 'True'
+    CSRF_COOKIE_SECURE= getenv('CSRF_COOKIE_SECURE',) == 'True'
+    SESSION_COOKIE_SECURE= getenv('SESSION_COOKIE_SECURE',) == 'True'
+    SECURE_BROWSER_XSS_FILTER= getenv('SECURE_BROWSER_XSS_FILTER',) == 'True'
+    SECURE_CONTENT_TYPE_NOSNIFF= getenv('SECURE_CONTENT_TYPE_NOSNIFF',) == 'True'
 
 
 # Application definition
@@ -159,7 +166,8 @@ DJANGO_COLORS = "error=red;warning=yellow;success=green;notice=magenta;link=blue
 # Some useful commands: py manage check --deploy
 # CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = [
-    getenv('FRONTEND_URL')
+    getenv('FRONTEND_URL'),
+    getenv('DEV_FRONTEND_URL'),
 ]
 CORS_ALLOW_CREDENTIALS = True
 
