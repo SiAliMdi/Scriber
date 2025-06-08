@@ -86,7 +86,7 @@ const ValidationDialog = ({ datasetId, datasetSerialNumber }: ValidationDialogPr
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <span className="hover:cursor-pointer">Valider les annotations</span>
+        <span className="hover:cursor-pointer">Valider les annotations de classification</span>
       </DialogTrigger>
       <DialogContent className="max-w-3xl">
         <DialogHeader>

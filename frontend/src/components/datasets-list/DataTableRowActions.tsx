@@ -13,11 +13,14 @@ import ReadDialog from './DatasetDialog';
 import LabelsDialog from '../categories-list/LabelsDialog';
 import AnnotateDialog from "./AnnotateBinDialog";
 import AnnotateExtractDialog from "./AnnotateExtractDialog";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
 import ExtValidationDialog from './ExtValidationDialog';
 import DownloadDatasetDialog from './DownloadDatasetDialog';
 import { Dataset } from '@/@types/dataset';
+import { useEffect, useState } from 'react';
+import { User } from '@/@types/user';
+import { getUser } from '@/utils/User';
 
 interface DataTableRowActionsProps {
   row: Row<Dataset>;
@@ -31,6 +34,18 @@ interface DataTableRowActionsProps {
 const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowActionsProps) => {
   // const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>();
+  
+  useEffect(() => {
+    getUser().then((response) => {
+      setUser(response);
+      if (!response) {
+        navigate('/login');
+      }
+    }
+    );
+  }, [])
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
       <DropdownMenu>
@@ -59,17 +74,19 @@ const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowAction
             datasetSerialNumber={row.original.serialNumber}
           />
 
-          <ValidationDialog
+          { user?.isSuperUser &&
+          (<ValidationDialog
             datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
           // categoryId={location.state.categoryId}
-          />
+          />)}
 
-          <ExtValidationDialog
+          { user?.isSuperUser &&
+          (<ExtValidationDialog
             datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
           // categoryId={location.state.categoryId}
-          />
+          />)}
 
           <DownloadDatasetDialog
             datasetId={row.original.id || ''}
