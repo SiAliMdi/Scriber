@@ -4,17 +4,30 @@ import Users from './pages/Users'
 import './index.css'
 import RegisterPage from './pages/RegisterPage'
 import React, { useEffect } from 'react'
-import CategoriesPage from './pages/CategoriesPage'
-import DatasetsPage from './pages/DatasetsPage'
-import ModelsPage from './pages/ModelsPage'
-import PromptsPage from './pages/PromptsPage'
-import SearchPage from './pages/SearchPage'
-import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
-import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
-import BinAnnotationValidation from './pages/BinAnnotationValidation'
 import { useToast } from "@/components/ui/use-toast"; // adjust import as needed
-import ExtractiveAnnotationValidation from './pages/ExtractiveAnnotationValidation'
-import LLMAnnotationValidation from './pages/LLMAnnotationValidation'
+// import CategoriesPage from './pages/CategoriesPage'
+// import ModelsPage from './pages/ModelsPage'
+// import PromptsPage from './pages/PromptsPage'
+// import SearchPage from './pages/SearchPage'
+// import BinaryAnnotationPage from './pages/BinaryAnnotationPage'
+// import BinAnnotationValidation from './pages/BinAnnotationValidation'
+// import ExtractiveAnnotationValidation from './pages/ExtractiveAnnotationValidation'
+/* import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
+import DatasetsPage from './pages/DatasetsPage'
+import LLMAnnotationValidation from './pages/LLMAnnotationValidation' */
+import { lazy, Suspense } from 'react';
+const ExtractiveAnnotationPage = lazy(() => import('./pages/ExtractiveAnnotationPage'));
+const LLMAnnotationValidation = lazy(() => import('./pages/LLMAnnotationValidation'));
+const CategoriesPage = lazy(() => import('./pages/CategoriesPage'));
+const PromptsPage = lazy(() => import('./pages/PromptsPage'));
+const DatasetsPage = lazy(() => import('./pages/DatasetsPage'));
+const ModelsPage = lazy(() => import('./pages/ModelsPage'));
+const SearchPage = lazy(() => import('./pages/SearchPage'));
+const BinaryAnnotationPage = lazy(() => import('./pages/BinaryAnnotationPage'));
+const BinAnnotationValidation = lazy(() => import('./pages/BinAnnotationValidation'));
+const ExtractiveAnnotationValidation = lazy(() => import('./pages/ExtractiveAnnotationValidation'));
+
+
 
 const  App: React.FC = () => {
     const { toast } = useToast();
@@ -37,20 +50,72 @@ const  App: React.FC = () => {
             <Router>
                 <Routes>
                 
-                    <Route path="/" element={<SearchPage/>} /> 
+                    <Route path="/" element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                        <SearchPage/>
+                        </Suspense>
+                        } /> 
                     <Route path='/users' element={<Users/>}/>
                 
                     <Route path="/login" element={<LoginPage/>}/>
                     <Route path='/register' element={<RegisterPage/>}/>
-                    <Route path='/categories' element={<CategoriesPage/>}/>
-                    <Route path='/datasets/:id' element={<DatasetsPage/>}/>
-                    <Route path='/models/:id' element={<ModelsPage/>}/>
-                    <Route path='/prompts/:id' element={<PromptsPage/>}/>
-                    <Route path='/annoter_bin/:id' element={<BinaryAnnotationPage/>}/>
-                    <Route path='/annoter_ext/:id' element={<ExtractiveAnnotationPage/>}/>
-                    <Route path='/validate/:datasetId' element={<BinAnnotationValidation/>}/>
-                    <Route path='/validate_extractive/:datasetId' element={<ExtractiveAnnotationValidation/>}/>
-                    <Route path='/validate_llm_extractive/:datasetId' element={<LLMAnnotationValidation/>}/>
+
+                    <Route path='/categories' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+                        <CategoriesPage/>
+                        </Suspense>
+                        }/>
+
+                    <Route path='/datasets/:id' 
+                    element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                    <DatasetsPage/>
+                    </Suspense>
+                    }/>
+
+                    <Route path='/models/:id' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+
+                        <ModelsPage/>
+                        </Suspense>
+                        }/>
+                    <Route path='/prompts/:id' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+
+                        <PromptsPage/>
+                        </Suspense>
+                        }/>
+                    <Route path='/annoter_bin/:id' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+
+                        <BinaryAnnotationPage/>
+                        </Suspense>
+                        }/>
+                    <Route path='/annoter_ext/:id' 
+                    element={
+                    <Suspense fallback={<div>Loading...</div>}> 
+                    <ExtractiveAnnotationPage/>
+                    </Suspense>
+                }
+                    />
+                    <Route path='/validate/:datasetId' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+
+                        <BinAnnotationValidation/>
+                        </Suspense>
+                        }/>
+                    <Route path='/validate_extractive/:datasetId' element={
+                        <Suspense fallback={<div>Loading...</div>}>
+
+                        <ExtractiveAnnotationValidation/>
+                        </Suspense>
+                        }/>
+                    <Route path='/validate_llm_extractive/:datasetId' 
+                    element={
+                    <Suspense fallback={<div>Loading...</div>}>
+                        <LLMAnnotationValidation/>
+                    </Suspense>
+                    }/>
                 </Routes>
             </Router>
             
