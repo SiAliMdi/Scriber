@@ -6,13 +6,13 @@ import DataTableRowActions from "./DataTableRowActions";
 
 
 export interface CategoriesColumnsProps {
-    setCategories: (value: Categorie[]) => void;
-    onEdit: (value: Categorie) => void;
+    setCategories: React.Dispatch<React.SetStateAction<Categorie[]>>;
+    // onEdit: (value: Categorie) => void;
     onDelete: (value: Categorie) => void;
 }
 
-const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps): ColumnDef<Categorie>[] => [
-// (): ColumnDef<Categorie>[] => [
+const getColumns = ({ setCategories, onDelete }: CategoriesColumnsProps): ColumnDef<Categorie>[] => [
+    // (): ColumnDef<Categorie>[] => [
     {
         header: ({ column }) => {
             return (
@@ -76,7 +76,7 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
             )
         },
         id: "norme",
-        accessorFn: row => row.norme.length > 10 ? row.norme.slice(0, 10) + "..." : row.norme,
+        accessorFn: row => row.norme?.length || 0 > 10 ? row.norme?.slice(0, 10) + "..." : row.norme,
     },
     {
         header: ({ column }) => {
@@ -92,7 +92,7 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
             )
         },
         id: "fondement",
-        accessorFn: row => row.fondement.length > 10 ? row.fondement.slice(0, 10) + "..." : row.fondement,
+        accessorFn: row => row.fondement?.length || 0 > 10 ? row.fondement?.slice(0, 10) + "..." : row.fondement,
     },
     {
         header: ({ column }) => {
@@ -107,7 +107,7 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
             )
         },
         id: "condition",
-        accessorFn: row => row.condition?.length > 10 ? row.condition.slice(0, 10) + "..." : row.condition,
+        accessorFn: row => row.condition?.length || 0 > 10 ? row.condition?.slice(0, 10) + "..." : row.condition,
     },
     {
         header: ({ column }) => {
@@ -123,13 +123,13 @@ const getColumns =  ({ setCategories, onEdit, onDelete }: CategoriesColumnsProps
             )
         },
         id: "object",
-        accessorFn: row => row.object?.length > 10 ? row.object.slice(0, 10) + "..." : row.object,
+        accessorFn: row => row.object?.length || 0 > 10 ? row.object?.slice(0, 10) + "..." : row.object,
         // accessorKey : "object",
     },
     // header: "Actions",
     {
         id: "actions",
-        cell: ({ row }) => { return <DataTableRowActions row={row} setCategories={setCategories} onEdit={onEdit} onDelete={onDelete} /> },
+        cell: ({ row }) => { return <DataTableRowActions row={row} setCategories={setCategories} onDelete={onDelete} /> },
         size: 10,
     }
 ]

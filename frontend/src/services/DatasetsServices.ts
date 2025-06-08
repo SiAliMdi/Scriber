@@ -1,4 +1,4 @@
-import { Dataset } from "@/@types/dataset";
+import { CreateDatasetResponse, Dataset } from "@/@types/dataset";
 import axios from "axios";
 
 
@@ -56,7 +56,7 @@ const fetchDatasets = async (categoryId: string, setDatasets: React.Dispatch<Rea
 
 
 
-const createDataset = async (dataset: Dataset) => {
+const createDataset = async (dataset: Dataset): Promise<CreateDatasetResponse> => {
   try {
     const response = await axios.post(
       `${import.meta.env.VITE_BACKEND_APP_API_URL}datasets/1/new/`,
@@ -71,16 +71,25 @@ const createDataset = async (dataset: Dataset) => {
     );
     return response;
   } catch (error) {
-    return error;
+    console.error("Error creating dataset:", error);
+    throw error;
   }
 }
 
 const editDataset = async (dataset: Dataset) => {
   try {
+    const backendPayload = {
+      name: dataset.name,
+      description: dataset.description,
+      // size: dataset.size,
+      annotated_decisions: dataset.annotatedDecisions,
+      categorie: dataset.categorie,
+    };
     const response = await axios.patch(
       `${import.meta.env.VITE_BACKEND_APP_API_URL}datasets/1/${dataset.id}/`,
       {
-        ...dataset
+        // ...dataset
+        ...backendPayload,
       },
       {
         headers: {

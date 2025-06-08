@@ -14,11 +14,11 @@ import { useEffect, useState } from "react";
 import { fetchTrainings } from "@/services/AiModelsServices";
 import AiModel, { Training } from "@/@types/ai-model";
 
-interface ReadDialogProps<AiModel> {
+interface ReadDialogProps {
     row: Row<AiModel>;
 }
 
-const ReadDialog = ({ row }: ReadDialogProps<AiModel>) => {
+const ReadDialog = ({ row }: ReadDialogProps) => {
 
     const [trainings, setTrainings] = useState<Training[]>([]);
 

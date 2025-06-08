@@ -6,7 +6,7 @@ import {
     AlertDialogDescription,
     AlertDialogFooter,
     AlertDialogHeader,
-    AlertDialogTitle,
+    // AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
@@ -57,7 +57,7 @@ export function NewLabelAlertDialog( {datasetId, labels, setLabels }: NewLabelAl
                             setLabels(newLabels);
 
                             createLabel(datasetId, newLabel).then((response) => {
-                                if (response.status === 200) {
+                                if (response?.status === 200) {
                                     toast({
                                         title: "Label ajouté",
                                         duration: 3000,

@@ -5,10 +5,10 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Dataset } from "@/@types/dataset";
 import { Button } from "@/components/ui/button"
 import CreateDialog from "@/components/datasets-list/CreateDialog";
-import {  fetchDatasets,createDataset,  editDataset, deleteDataset } from "@/services/DatasetsServices";
+import { fetchDatasets, createDataset,  deleteDataset } from "@/services/DatasetsServices";
 import { useToast } from "@/components/ui/use-toast";
 import getColumns from "@/components/datasets-list/Columns";
-import {useLocation} from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 
 const DatasetsPage = () => {
@@ -19,7 +19,7 @@ const DatasetsPage = () => {
     const { toast } = useToast();
     const location = useLocation();
 
-    const onEdit = useCallback((value: Dataset) => {
+    /* const onEdit = useCallback((value: Dataset) => {
         editDataset(value).then((response) => {
             console.log(response);
         }
@@ -27,7 +27,7 @@ const DatasetsPage = () => {
             console.error(error);
         }
         );
-    }, []);
+    }, []); */
 
     const onDelete = useCallback((value: Dataset) => {
         deleteDataset(value).then(response => {
@@ -52,9 +52,9 @@ const DatasetsPage = () => {
 
 
     useMemo(() =>
-        setColumns(getColumns({ setDatasets: setDatasets, onEdit: onEdit, onDelete: onDelete })),
-        [ onEdit, onDelete]);
-    
+        setColumns(getColumns({ setDatasets: setDatasets, onDelete: onDelete })),
+        [onDelete]);
+
     useEffect(() => {
         fetchDatasets(location.state.categoryId, setDatasets);
     }, [])
@@ -65,13 +65,14 @@ const DatasetsPage = () => {
             <h1 className="text-2xl font-bold float-left mx-1 my-2">Datasets de la catégorie {location.state.categorySerialNumber} </h1>
             <Button variant="secondary" className="bg-blue-500 text-white float-right mx-1 my-2" onClick={() => {
                 setNextSerialNumber(datasets.length + 1);
-                setCreateDialogOpen(true)
-                }}>Ajouter un dataset
+                setCreateDialogOpen(true);
+                console.log("Next Serial Number: ", nextSerialNumber);
+            }}>Ajouter un dataset
 
             </Button>
             {
-                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} nextSerialNumber={nextSerialNumber} createDataset={createDataset} setDatasets={setDatasets} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
-                 />
+                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} createDataset={createDataset} setDatasets={setDatasets} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
+                />
             }
 
             <DataTable columns={columns} data={datasets} />

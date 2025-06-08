@@ -6,7 +6,7 @@ import React from "react";
 import Header from "../components/Header";
 
 const BasePage: React.FC = () => {
-    const  [user, setUser]  = useState<User>(null);
+    const  [user, setUser]  = useState<User | null>(null);
 
     const navigate = useNavigate();
     

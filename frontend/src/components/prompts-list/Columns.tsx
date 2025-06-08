@@ -1,4 +1,4 @@
-import {Prompt} from "@/@types/prompt";
+import { Prompt } from "@/@types/prompt";
 import { ColumnDef } from "@tanstack/react-table"
 import { ArrowUpDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -6,7 +6,7 @@ import DataTableRowActions from "./DataTableRowActions"
 
 
 export interface PromptsColumnsProps {
-    setPrompts: (value: Prompt[]) => void;
+    setPrompts: React.Dispatch<React.SetStateAction<Prompt[]>>;
     onEdit: (value: Prompt) => void;
     onDelete: (value: Prompt) => void;
 }
@@ -43,7 +43,7 @@ const getColumns = ({ setPrompts, onEdit, onDelete }: PromptsColumnsProps): Colu
         },
         size: 10,
         id: "prompt",
-        accessorFn: row =>  {
+        accessorFn: row => {
             if (!row.prompt) {
                 return "";
             }
@@ -51,8 +51,8 @@ const getColumns = ({ setPrompts, onEdit, onDelete }: PromptsColumnsProps): Colu
                 return row.prompt.length > 10 ? row.prompt.slice(0, 10) + "..." : row.prompt;
             }
         }
-            ,
-            
+        ,
+
     },
     {
         header: ({ column }) => {
@@ -69,9 +69,9 @@ const getColumns = ({ setPrompts, onEdit, onDelete }: PromptsColumnsProps): Colu
         },
         id: "createdAt",
         accessorFn: row => row?.createdAt ? new Date(row.createdAt).toLocaleString() : "Never",
-        sortingFn: (rowA, rowB, columnId) => {
-            const dateA = new Date(rowA.original[columnId]).getTime();
-            const dateB = new Date(rowB.original[columnId]).getTime();
+        sortingFn: (rowA, rowB,) => {
+            const dateA = new Date(rowA.original.createdAt || 0).getTime();
+            const dateB = new Date(rowB.original.createdAt || 0).getTime();
             return dateA - dateB;
         },
     },

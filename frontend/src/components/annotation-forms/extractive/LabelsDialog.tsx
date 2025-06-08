@@ -44,7 +44,7 @@ const LabelsDialog = ({
         
         setLabels(newLabels);
         try {
-            const response = await updateLabel(newLabels[index].id, newLabels[index]);
+            const response = await updateLabel(newLabels[index].id || '', newLabels[index]);
             if (response && response.status >= 200 && response.status < 300) {
                 toast({
                     title: "Label modifié avec succès",
@@ -56,7 +56,7 @@ const LabelsDialog = ({
             }
             else {
                 toast({
-                    title: `${response.status} - Erreur de modification`,
+                    title: `${response?.status} - Erreur de modification`,
                     duration: 3000,
                     description: `Le label ${newLabels[index].label} n'a pas pu être modifié`,
                     variant: "destructive",
@@ -140,7 +140,7 @@ const LabelsDialog = ({
                                 onClick={() => {
                                     const newLabels = labels.filter((_, i) => i !== index)
                                     setLabels(newLabels)
-                                    deleteLabel(label.id)
+                                    deleteLabel(label.id || '')
                                 }}
                             >
                                 Supprimer

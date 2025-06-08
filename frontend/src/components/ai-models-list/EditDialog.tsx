@@ -17,16 +17,15 @@ import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
 import { editAiModel, fetchAiModelTypes } from "@/services/AiModelsServices";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group"
-import { AiModelType } from "@/@types/ai-model"
-import { set } from "lodash"
+import AiModel, { AiModelType } from "@/@types/ai-model"
 
-interface EditDialogProps<TData> {
-    row: Row<TData>;
-    onEdit: (value: TData) => void;
-    setAiModels: (value: TData[]) => void;
+interface EditDialogProps {
+    row: Row<AiModel>;
+    onEdit: (value: AiModel) => void;
+    setAiModels: React.Dispatch<React.SetStateAction<AiModel[]>>;
 }
 
-const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>) => {
+const EditDialog = ({ row, onEdit, setAiModels }: EditDialogProps) => {
 
     const [name, setName] = useState(row.original.name);
     const [description, setDescription] = useState(row.original.description);
@@ -38,8 +37,8 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
     useEffect(() => {
         fetchAiModelTypes().then(data =>
         {
-            setaiModelTypes(data);
-            if (data.length > 0) {
+            setaiModelTypes(data ?? []);
+            if (data && data.length > 0) {
                 setaiModelType(data[0].type);
             }
         }
@@ -56,7 +55,7 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
 
         editAiModel(model).then((response) => {
             if (response === 200) {
-                setAiModels((prev: TData[]) => {
+                setAiModels((prev: AiModel[]) => {
                     const index = prev.findIndex(u => u.id === model.id);
                     prev[index] = model;
                     return [...prev];
@@ -124,14 +123,14 @@ const EditDialog = <TData,>({ row, onEdit, setAiModels }: EditDialogProps<TData>
                                 <div className="flex items-center space-x-2 justify-center  col-span-3">
 
                                     <RadioGroupItem value="classification binaire" id="binary" className="cursor-pointer"
-                                        onClick={e => setmodelType("classification binaire")}
+                                        onClick={() => setmodelType("classification binaire")}
                                         checked={modelType === "classification binaire"}
                                     />
                                     <Label htmlFor="binary" className="cursor-pointer">Modèle de classification binaire</Label>
                                 </div>
                                 <div className="flex items-center space-x-2 justify-center col-span-3">
                                     <RadioGroupItem value="extractif" id="extractive" className="cursor-pointer"
-                                        onClick={e => setmodelType("extractif")}
+                                        onClick={() => setmodelType("extractif")}
                                         checked={modelType === "extractif"}
                                     />
                                     <Label htmlFor="extractive" className="cursor-pointer">Modèle extractif</Label>

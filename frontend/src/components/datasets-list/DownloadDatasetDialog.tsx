@@ -14,10 +14,10 @@ import { fetchExtractiveModelsWithAnnotations, fetchExtractiveUsersWithAnnotatio
 import { saveDownloadLog } from "@/services/DownloadServices";
 import { User } from "@/@types/user";
 import AiModel, { Training } from "@/@types/ai-model";
-import { fetchBinDecisionsWithAnnotations, fetchTrainedModelsForDataset, fetchUsersWithAnnotations } from "@/services/ValidationServices";
+import { fetchTrainedModelsForDataset, fetchUsersWithAnnotations } from "@/services/ValidationServices";
 import { Decision } from "@/@types/decision";
 import { BinaryAnnotation, TextAnnotation } from "@/@types/annotations";
-import { fetchDecisionsWithLLMExtractions } from "@/services/LLMServices";
+import { DecisionWithExtraction, fetchDecisionsWithLLMExtractions } from "@/services/LLMServices";
 import axios from "axios";
 
 interface DownloadDatasetDialogProps {
@@ -31,9 +31,9 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
   const [annotationType, setAnnotationType] = useState<"binary" | "extractive">("binary");
   const [annotationSource, setAnnotationSource] = useState<"manual" | "model">("manual");
 
-  const [decisions, setDecisions] = useState<Decision[]>([]);
-  const [binAnnotations, setBinAnnotations] = useState<BinaryAnnotation[]>([]);
-  const [manExtAnnotations, setManExtAnnotations] = useState<Record<string, TextAnnotation[]>>({});
+  const [, setDecisions] = useState<Decision[]>([]);
+  // const [binAnnotations, setBinAnnotations] = useState<BinaryAnnotation[]>([]);
+  const [, setManExtAnnotations] = useState<Record<string, TextAnnotation[]>>({});
 
   const [usersBin, setUsersBin] = useState<User[]>([]);
   const [selectedBinUser, setselectedBinUser] = useState<string>("");
@@ -45,7 +45,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
   const [llms, setllms] = useState<string[]>([]);
   const [selectedUserLLM, setSelectedUserLLM] = useState<string>("");
   const [selectedLLM, setSelectedLLM] = useState<string>("");
-  const [totalAnnotations, settotalAnnotations] = useState<Record<string, number>>({});
+  const [, settotalAnnotations] = useState<Record<string, number>>({});
   // const [data, setData] = useState<any>([]);
 
   useEffect(() => {
@@ -184,7 +184,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
             datasetId,
             selectedLLM
           );
-          data = decisionsWithExtractions.map((item: any) => ({
+          data = decisionsWithExtractions.map((item: DecisionWithExtraction) => ({
             ...item.decision,
             extraction: item.extraction,
           }));

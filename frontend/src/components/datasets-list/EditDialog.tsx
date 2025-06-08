@@ -12,18 +12,18 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Row } from "@tanstack/react-table"
-import { useState } from "react"
+import React, { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
 import { editDataset } from "@/services/DatasetsServices"
+import { Dataset } from "@/@types/dataset"
 
-interface EditDialogProps<TData> {
-    row: Row<TData>;
-    onEdit: (value: TData) => void;
-    setDatasets: (value: TData[]) => void;
+interface EditDialogProps {
+    row: Row<Dataset>;
+    setDatasets: React.Dispatch<React.SetStateAction<Dataset[]>>;
 }
 
-const EditDialog = <TData,>({ row, onEdit, setDatasets }: EditDialogProps<TData>) => {
+const EditDialog = ({ row,  setDatasets }: EditDialogProps) => {
 
     const [name, setName] = useState(row.original.name);
     const [description, setDescription] = useState(row.original.description);
@@ -38,7 +38,7 @@ const EditDialog = <TData,>({ row, onEdit, setDatasets }: EditDialogProps<TData>
        
         editDataset(dataset).then((response) => {
             if (response === 200) {
-                setDatasets((prev: TData[]) => {
+                setDatasets((prev: Dataset[]) => {
                     const index = prev.findIndex(u => u.id === dataset.id);
                     prev[index] = dataset;
                     return [...prev];
@@ -51,6 +51,7 @@ const EditDialog = <TData,>({ row, onEdit, setDatasets }: EditDialogProps<TData>
                     className: "text-green-700",
                 });
             } else {
+                console.log(`Error editing dataset: ${response}`);
                 toast({
                     variant: "destructive",
                     duration: 5000,

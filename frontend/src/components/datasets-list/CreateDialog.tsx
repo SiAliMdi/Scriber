@@ -13,19 +13,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
-import { Dataset } from "@/@types/dataset";
-import { CloudCog } from "lucide-react"
+import { CreateDatasetResponse, Dataset } from "@/@types/dataset";
+// import { CloudCog } from "lucide-react"
 
-interface CreateDialogProps<TData> {
+interface CreateDialogProps {
     categoryId: string;
-    nextSerialNumber: number;
-    createDataset : (dataset: TData) => Promise<number>;
+    // nextSerialNumber: number;
+    createDataset : (dataset: Dataset) => Promise<CreateDatasetResponse>;
     createDialogOpen: boolean;
     setCreateDialogOpen: (value: boolean) => void;
-    setDatasets: (value: TData[]) => void;
+    setDatasets: React.Dispatch<React.SetStateAction<Dataset[]>>;
 }
 
-const CreateDialog = <TData,>({categoryId, nextSerialNumber, createDataset, createDialogOpen, setCreateDialogOpen, setDatasets }: CreateDialogProps<TData>) => {
+const CreateDialog = ({categoryId,  createDataset, createDialogOpen, setCreateDialogOpen, setDatasets }: CreateDialogProps) => {
 
     const [name, setNomenclature] = useState("");
     const [description, setDescription] = useState("");
@@ -36,17 +36,17 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createDataset, crea
         const dataset : Dataset = {
             name,
             description,
-            categorie: categoryId
+            categorie: categoryId,
         };
         
         createDataset(dataset).then((response) => {
             if (response.status === 200) {
                 dataset.serialNumber = response.data.serial_number;
-                dataset.createdAt = response.data.created_at;
+                dataset.createdAt = response.data.created_at ? new Date(response.data.created_at) : undefined;
                 dataset.size = 0;
                 dataset.annotatedDecisions = 0;
                 dataset.id = response.data.id;
-                setDatasets((prev: TData[]) => [...prev, dataset]);
+                setDatasets((prev: Dataset[]) => [...prev, dataset]);
                 toast({
                     title: "Dataset create success",
                     duration: 5000,

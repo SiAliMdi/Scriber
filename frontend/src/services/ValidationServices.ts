@@ -2,7 +2,7 @@ import axios from "axios";
 import { User } from "@/@types/user";
 import AiModel, { Training } from "@/@types/ai-model";
 import { BinaryAnnotation } from "@/@types/annotations";
-import { Decision } from "@/@types/decision";
+import { Decision, fetchedDecision } from "@/@types/decision";
 
 
 export const fetchUsersWithAnnotations = async (datasetId: string): Promise<User[]> => {
@@ -57,16 +57,7 @@ export const fetchBinDecisionsWithAnnotations = async (
     
     // Extract decisions
     const decisions: Decision[] = response.data.raw_decisions.map(
-      (decision: {
-        id: string;
-        j_texte: string;
-        j_chambre?: string;
-        j_date?: string;
-        j_rg: string;
-        j_ville: string;
-        j_type?: string;
-        j_juridiction?: string;
-      }) => ({
+      (decision: fetchedDecision) => ({
         id: decision.id,
         j_texte: decision.texte_net,
         j_chambre: decision.j_chambre,

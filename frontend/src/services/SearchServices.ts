@@ -176,15 +176,11 @@ const search = async (
 
     const hits: Decision[] | [] =
       searchResults.hits?.map((hit: any) => {
-        const intDate = hit.document.j_date; // Example timestamp
-        const date = new Date(intDate * 1000); // Convert to milliseconds
-        const formattedDate = date.toISOString().split("T")[0];
-
         return {
           id: hit.document.id,
           j_texte: hit.document.j_texte,
           j_chambre: hit.document.j_chambre,
-          j_date: formattedDate,
+          j_date:  hit.document.j_date, // Assuming j_date is already in the correct format
           j_rg: hit.document.j_rg,
           j_ville: hit.document.j_ville,
           j_type: hit.document.j_type,

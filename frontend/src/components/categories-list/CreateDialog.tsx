@@ -13,17 +13,17 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
-import { Categorie } from "@/@types/categorie";
+import { Categorie, CreateCategorieResponse } from "@/@types/categorie";
 
-interface CreateDialogProps<TData> {
-    nextSerialNumber: number;
-    createCategorie: (categorie: TData) => Promise<number>;
+interface CreateDialogProps {
+    // nextSerialNumber: number;
+    createCategorie: (categorie: Categorie) => Promise<CreateCategorieResponse>;
     createDialogOpen: boolean;
     setCreateDialogOpen: (value: boolean) => void;
-    setCategories: (value: TData[]) => void;
+    setCategories: React.Dispatch<React.SetStateAction<Categorie[]>>;
 }
 
-const CreateDialog = <TData,>({ nextSerialNumber, createCategorie, createDialogOpen, setCreateDialogOpen, setCategories }: CreateDialogProps<TData>) => {
+const CreateDialog = ({  createCategorie, createDialogOpen, setCreateDialogOpen, setCategories }: CreateDialogProps) => {
 
     const [nomenclature, setNomenclature] = useState("");
     const [code, setCode] = useState("");
@@ -51,7 +51,7 @@ const CreateDialog = <TData,>({ nextSerialNumber, createCategorie, createDialogO
                 categorie.serialNumber = response.data.serial_number;
                 categorie.createdAt = response.data.created_at;
                 categorie.id = response.data.id;
-                setCategories((prev: TData[]) => [...prev, categorie]);
+                setCategories((prev: Categorie[]) => [...prev, categorie]);
                 toast({
                     title: "Catégorie create success",
                     duration: 5000,

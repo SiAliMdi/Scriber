@@ -18,11 +18,11 @@ import AiModel, { Training } from "@/@types/ai-model";
 
 interface ValidationDialogProps {
   datasetId: string;
-  datasetSerialNumber: string;
-  categoryId: string;
+  datasetSerialNumber: number | undefined;
+  // categoryId: string;
 }
 
-const ValidationDialog = ({ datasetId, datasetSerialNumber, categoryId }: ValidationDialogProps) => {
+const ValidationDialog = ({ datasetId, datasetSerialNumber }: ValidationDialogProps) => {
   const [validationMethod, setValidationMethod] = useState<"manual" | "model">("manual");
   const [users, setUsers] = useState<User[]>([]);
   const [models, setModels] = useState<AiModel[]>([]);

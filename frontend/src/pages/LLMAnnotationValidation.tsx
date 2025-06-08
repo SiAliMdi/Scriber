@@ -6,6 +6,7 @@ import { useLocation } from "react-router-dom";
 import { fetchDecisionsWithLLMExtractions, DecisionWithExtraction, saveExtractionValidation, deleteLLMDatasetDecisions } from "@/services/LLMServices";
 import { JsonEditor } from 'json-edit-react';
 import { jsonrepair } from 'jsonrepair'
+import { JSONObject } from "@/@types/prompt";
 
 
 const LLMAnnotationValidation: React.FC = () => {
@@ -16,7 +17,7 @@ const LLMAnnotationValidation: React.FC = () => {
     const [showDecisionsPanel, setShowDecisionsPanel] = useState(false);
     const [checkedDecisions, setCheckedDecisions] = useState<Record<string, boolean>>({});
     // For editing JSON
-    const [editedJson, setEditedJson] = useState<any>(null);
+    const [editedJson, setEditedJson] = useState<JSONObject>();
 
     // Draggable hamburger button state
     const [btnPos, setBtnPos] = useState({ x: 16, y: 16 });
@@ -83,7 +84,7 @@ const LLMAnnotationValidation: React.FC = () => {
             );
             // Remove deleted decisions from state
             const remaining = decisionsWithExtractions.filter(
-                d => !decisionIdsToDelete.includes(d.decision.id)
+                d => !decisionIdsToDelete.includes(d.decision.id || "")
             );
             setDecisionsWithExtractions(remaining);
             setCheckedDecisions({});
@@ -127,7 +128,7 @@ const LLMAnnotationValidation: React.FC = () => {
                     try {
                         await saveExtractionValidation(
                             selected.extraction.id,
-                            editedJson,
+                            editedJson as JSONObject,
                             "validated"
                         );
                         setDecisionsWithExtractions(prev =>
@@ -138,7 +139,7 @@ const LLMAnnotationValidation: React.FC = () => {
                                         extraction: item.extraction
                                             ? {
                                                 ...item.extraction,
-                                                llm_json_result: editedJson,
+                                                llm_json_result: JSON.stringify(editedJson),
                                                 state: "validated"
                                             }
                                             : null
@@ -232,11 +233,11 @@ const LLMAnnotationValidation: React.FC = () => {
                                 >
                                     <input
                                         type="checkbox"
-                                        checked={checkedDecisions[item.decision.id] || false}
+                                        checked={checkedDecisions[item.decision.id || ""] || false}
                                         onChange={e =>
                                             setCheckedDecisions(prev => ({
                                                 ...prev,
-                                                [item.decision.id]: e.target.checked
+                                                [item.decision.id || ""]: e.target.checked
                                             }))
                                         }
                                         onClick={e => e.stopPropagation()}
@@ -276,7 +277,7 @@ const LLMAnnotationValidation: React.FC = () => {
                             <div className="h-full w-full">
                                 <JsonEditor
                                     data={editedJson}
-                                    setData={setEditedJson}
+                                    setData={(data) => setEditedJson(data as JSONObject)}
                                     /* onChange={
                                         (newData) => {
                                             setEditedJson(newData);

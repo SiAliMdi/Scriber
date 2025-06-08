@@ -8,27 +8,28 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import EditDialog, { EditDialogProps } from './EditDialog';
-import ReadDialog, { ReadDialogProps } from './DatasetDialog';
-import LabelsDialog, { LabelsDialogProps } from '../categories-list/LabelsDialog';
+import EditDialog from './EditDialog';
+import ReadDialog from './DatasetDialog';
+import LabelsDialog from '../categories-list/LabelsDialog';
 import AnnotateDialog from "./AnnotateBinDialog";
 import AnnotateExtractDialog from "./AnnotateExtractDialog";
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import ValidationDialog from './ValidationDialog';
 import ExtValidationDialog from './ExtValidationDialog';
 import DownloadDatasetDialog from './DownloadDatasetDialog';
+import { Dataset } from '@/@types/dataset';
 
-interface DataTableRowActionsProps<TData> {
-  row: Row<TData>;
-  setDatasets: (value: TData[]) => void;
-  onEdit: (value: TData) => void;
-  onDelete: (value: TData) => void;
+interface DataTableRowActionsProps {
+  row: Row<Dataset>;
+  setDatasets: React.Dispatch<React.SetStateAction<Dataset[]>>;
+  // onEdit: (value: Dataset) => void;
+  onDelete: (value: Dataset) => void;
 }
 
 
 
-const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
-  const navigate = useNavigate();
+const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowActionsProps) => {
+  // const navigate = useNavigate();
   const location = useLocation();
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
@@ -41,38 +42,38 @@ const DataTableRowActions = <TData,>({ row, setDatasets, onEdit, onDelete }: Dat
         <DropdownMenuContent align="end">
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
-          <ReadDialog {...{ row } as ReadDialogProps<TData>} />
-          <EditDialog {...{ row, onEdit, setDatasets, } as EditDialogProps<TData>} />
+          <ReadDialog {...{ row }} />
+          <EditDialog {...{ row,  setDatasets}} />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <LabelsDialog {...{ row } as LabelsDialogProps<TData>} />
-            
+          <LabelsDialog {...{ row }} />
+
           <AnnotateDialog
             categoryId={location.state.categoryId}
-            datasetId={row.original.id}
+            datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
           />
           <AnnotateExtractDialog
             categoryId={location.state.categoryId}
-            datasetId={row.original.id}
+            datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
           />
 
           <ValidationDialog
-            datasetId={row.original.id}
+            datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
-            categoryId={location.state.categoryId}
+          // categoryId={location.state.categoryId}
           />
 
           <ExtValidationDialog
-            datasetId={row.original.id}
+            datasetId={row.original.id || ''}
             datasetSerialNumber={row.original.serialNumber}
-            categoryId={location.state.categoryId}
+          // categoryId={location.state.categoryId}
           />
 
           <DownloadDatasetDialog
-            datasetId={row.original.id}
-            datasetName={row.original.name || row.original.serialNumber}
+            datasetId={row.original.id || ''}
+            datasetName={row.original.name || row.original.serialNumber?.toString() || ''}
           />
         </DropdownMenuContent>
       </DropdownMenu>

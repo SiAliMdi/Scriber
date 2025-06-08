@@ -69,3 +69,14 @@
     /* You can still use @apply for other utilities if needed */
   }
 }
+
+/* Add to your CSS file */
+.annotation-span {
+    padding: 1px 2px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.annotation-span:hover {
+    opacity: 0.8;
+}

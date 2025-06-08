@@ -1,4 +1,4 @@
-import { Categorie } from "@/@types/categorie";
+import { Categorie, CreateCategorieResponse } from "@/@types/categorie";
 import axios from "axios";
 
 
@@ -57,7 +57,7 @@ const fetchCategories = async (setCategories: React.Dispatch<React.SetStateActio
     });
 }
 
-const createCategorie = async (categorie: Categorie) => {
+const createCategorie = async (categorie: Categorie):Promise<CreateCategorieResponse> => {
   try {
     const response = await axios.post(
       `${import.meta.env.VITE_BACKEND_APP_API_URL}categories/`,
@@ -72,7 +72,8 @@ const createCategorie = async (categorie: Categorie) => {
     );
     return response;
   } catch (error) {
-    return error;
+    console.error("Error creating category:", error);
+    throw error;
   }
 }
 

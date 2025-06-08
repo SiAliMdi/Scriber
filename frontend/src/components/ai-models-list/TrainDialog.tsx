@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,13 +15,13 @@ import { useToast } from "@/components/ui/use-toast";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dataset } from "@/@types/dataset";
-import { Categorie } from "@/@types/categorie";
-import { AiModelType, TrainingConfig } from "@/@types/ai-model";
-import { fetchAiModelTypes } from "@/services/AiModelsServices";
+/* import { Categorie } from "@/@types/categorie";
+import { fetchAiModelTypes } from "@/services/AiModelsServices"; */
+import AiModel, { TrainingConfig } from "@/@types/ai-model";
 import {v4 as uuidv4} from 'uuid';
 
-interface TrainingDialogProps<TData> {
-  row: Row<TData>;
+interface TrainingDialogProps {
+  row: Row<AiModel>;
   // categoriesDatasets: Map<Categorie, Dataset[]>;
   datasets: Dataset[];
   // onTrainStart: (config: TrainingConfig) => void;
@@ -39,7 +39,7 @@ interface TrainingNotification {
   message: string;
 }
 
-const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
+const TrainDialog = ({ row, datasets }: TrainingDialogProps) => {
   // const [selectedCategory, setSelectedCategory] = useState<Categorie | null>(null);
   const [selectedDatasets, setSelectedDatasets] = useState<string[]>([]);
   const [splitMethod, setSplitMethod] = useState<'ratio' | 'kfold'>('ratio');
@@ -114,7 +114,7 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
     const ws = new WebSocket(url);
 
     const config: TrainingConfig = {
-      modelId: row.original.id,
+      modelId: row.original.id || '',
       // modelType: selectedModelType,
       datasets: selectedDatasets,
       splitMethod,
@@ -212,8 +212,8 @@ const TrainDialog = <TData,>({ row, datasets }: TrainingDialogProps<TData>) => {
                       <div key={dataset.id} className="flex items-center space-x-2">
                         <Checkbox
                           id={dataset.id}
-                          checked={selectedDatasets.includes(dataset.id)}
-                          onCheckedChange={() => handleDatasetSelect(dataset.id)}
+                          checked={selectedDatasets.includes(dataset.id || '')}
+                          onCheckedChange={() => handleDatasetSelect(dataset.id || '')}
                         />
                         <Label htmlFor={dataset.id} className="text-sm">
                           {dataset.serialNumber} - {dataset.name}

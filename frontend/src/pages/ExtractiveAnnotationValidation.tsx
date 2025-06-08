@@ -9,7 +9,7 @@ import { useLocation } from "react-router-dom";
 import { fetchTextDecisionsWithAnnotations, createAnnotation, deleteAnnotation, deleteExtractiveDatasetDecisions, validateDecisionAnnotations } from "@/services/ExtractiveAnnotationServices";
 import { fetchLabels } from "@/services/LabelsServices";
 import { Decision } from "@/@types/decision";
-import { TextAnnotation } from "@/@types/annotations";
+import { AnnotationData, TextAnnotation } from "@/@types/annotations";
 import { Label as LabelType } from "@/@types/label";
 import LabelsDialog from "@/components/annotation-forms/extractive/LabelsDialog";
 
@@ -78,6 +78,7 @@ const ExtractiveAnnotationValidation: React.FC = () => {
         const fragment = document.createDocumentFragment();
         let lastIndex = 0;
         const text = selectedDecision.j_texte || "";
+        if (!selectedDecision.id) return;
         const decisionAnnotations = annotations[selectedDecision.id] || [];
 
         // Sort annotations by start offset
@@ -89,15 +90,15 @@ const ExtractiveAnnotationValidation: React.FC = () => {
             if (annotation.start_offset > lastIndex) {
                 fragment.appendChild(document.createTextNode(
                     text.slice(lastIndex, annotation.start_offset)
-
                 ));
             }
 
             // Create annotation span
             const span = document.createElement("span");
-            span.style.backgroundColor = labels.find(l => l.id === annotation.label)?.color || "yellow";
+            const labelId = String(annotation.label);
+            span.style.backgroundColor = labels.find(l => l.id === labelId)?.color || "yellow";
             span.textContent = text.slice(annotation.start_offset, annotation.end_offset);
-            span.title = labels.find(l => l.id === annotation.label)?.label || "Annotation";
+            span.title = labels.find(l => l.id === labelId)?.label || "Annotation";
 
             // Add double-click handler
             span.addEventListener("dblclick", () => handleAnnotationDelete(span, annotation.id));
@@ -115,7 +116,7 @@ const ExtractiveAnnotationValidation: React.FC = () => {
         container.innerHTML = "";
         container.appendChild(fragment);
 
-    }, [selectedDecision, annotations, labels]);
+    }, [selectedDecision, annotations, labels, totalAnnotationCounts]);
 
     const handleAnnotationDelete = (span: HTMLSpanElement, annotationId: string) => {
         deleteAnnotation(annotationId)
@@ -126,12 +127,12 @@ const ExtractiveAnnotationValidation: React.FC = () => {
 
                 setAnnotations(prev => ({
                     ...prev,
-                    [selectedDecision?.id]: prev[selectedDecision?.id].filter(a => a.id !== annotationId),
+                    [selectedDecision?.id || ""]: prev[selectedDecision?.id || ""].filter(a => a.id !== annotationId),
                 }));
 
                 setTotalAnnotationCounts(prev => ({
                     ...prev,
-                    [currentLabel!.id]: (prev[currentLabel!.id] || 0) - 1,
+                    [currentLabel!.id || ""]: (prev[currentLabel!.id || ""] || 0) - 1,
                 }));
             })
             .catch(console.error);
@@ -153,7 +154,7 @@ const ExtractiveAnnotationValidation: React.FC = () => {
         const endOffset = startOffset + selectedText.length;
 
         // Check for overlap with existing annotations
-        const existingAnnotations = annotations[selectedDecision.id] || [];
+        const existingAnnotations = annotations[selectedDecision.id || ""] || [];
         const overlappingAnnotation = existingAnnotations.find(ann =>
             ann.start_offset < endOffset && ann.end_offset > startOffset
         );
@@ -163,12 +164,12 @@ const ExtractiveAnnotationValidation: React.FC = () => {
                 .then(() => {
                     setAnnotations(prev => ({
                         ...prev,
-                        [selectedDecision.id]: prev[selectedDecision.id].filter(a => a.id !== overlappingAnnotation.id),
+                        [selectedDecision.id || ""]: prev[selectedDecision.id || ""].filter(a => a.id !== overlappingAnnotation.id),
                     }));
                     // Decrement the counter for the label of the removed annotation
                     setTotalAnnotationCounts(prev => ({
                         ...prev,
-                        [overlappingAnnotation.label]: (prev[overlappingAnnotation.label] || 0) - 1,
+                        [overlappingAnnotation.label.id]: (prev[overlappingAnnotation.label.id] || 0) - 1,
                     }));
 
                     // Remove the span from DOM
@@ -198,23 +199,23 @@ const ExtractiveAnnotationValidation: React.FC = () => {
         range.insertNode(span);
         selection.removeAllRanges();
 
-        const annotationData = {
+        const annotationData: AnnotationData = {
             text: selectedText,
             start_offset: startOffset,
             end_offset: endOffset,
-            label: currentLabel.id,
-            decision: selectedDecision.id,
+            label: currentLabel.id || "",
+            decision: selectedDecision.id || "",
         };
 
         createAnnotation(annotationData)
             .then((newAnnotation) => {
                 setAnnotations(prev => ({
                     ...prev,
-                    [selectedDecision.id]: [...(prev[selectedDecision.id] || []), newAnnotation],
+                    [selectedDecision.id || ""]: [...(prev[selectedDecision.id || ""] || []), newAnnotation],
                 }));
                 setTotalAnnotationCounts(prev => ({
                     ...prev,
-                    [currentLabel.id]: (prev[currentLabel.id] || 0) + 1,
+                    [currentLabel.id || 0]: (prev[currentLabel.id || 0] || 0) + 1,
                 }));
 
                 span.addEventListener("dblclick", () =>
@@ -227,14 +228,14 @@ const ExtractiveAnnotationValidation: React.FC = () => {
     // Validate all annotations for the selected decision
     const handleValidateDecision = async () => {
         if (!selectedDecision) return;
-        const anns = annotations[selectedDecision.id] || [];
+        const anns = annotations[selectedDecision.id || ""] || [];
         if (anns.length === 0) return;
         try {
-            await validateDecisionAnnotations(selectedDecision.id);
+            await validateDecisionAnnotations(selectedDecision.id || "");
             // Update local state
             setAnnotations(prev => ({
                 ...prev,
-                [selectedDecision.id]: prev[selectedDecision.id].map(a => ({ ...a, state: "validated" })),
+                [selectedDecision.id || ""]: prev[selectedDecision.id || ""].map(a => ({ ...a, state: "validated" })),
             }));
             // Move to next decision
             goToNextDecision();
@@ -260,7 +261,7 @@ const ExtractiveAnnotationValidation: React.FC = () => {
 
         deleteExtractiveDatasetDecisions(datasetId, decisionIdsToDelete)
             .then(() => {
-                const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id]);
+                const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id || ""]);
                 setDecisions(remainingDecisions);
                 setCheckedDecisions({});
                 if (selectedDecision && !remainingDecisions.some((d) => d.id === selectedDecision.id)) {
@@ -358,8 +359,8 @@ const ExtractiveAnnotationValidation: React.FC = () => {
                                 onClick={handleValidateDecision}
                                 disabled={
                                     !selectedDecision ||
-                                    !(annotations[selectedDecision.id]?.length > 0) ||
-                                    annotations[selectedDecision.id]?.every(a => a.state === "validated")
+                                    !(annotations[selectedDecision.id || ""]?.length > 0) ||
+                                    annotations[selectedDecision.id || ""]?.every(a => a.state === "validated")
                                 }
                                 title="Valider la décision"
                             >
@@ -379,24 +380,24 @@ const ExtractiveAnnotationValidation: React.FC = () => {
                         {decisions.map((decision, idx) => (
                             <div
                                 key={decision.id}
-                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id)}`}
+                                className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm ${selectedDecision?.id === decision.id ? "bg-blue-50" : ""} ${getDecisionStateColor(decision.id || "")}`}
                                 onClick={() => handleDecisionClick(decision)}
                                 ref={(el) => (decisionRefs.current[idx] = el)}
                             >
                                 <Checkbox
-                                    checked={checkedDecisions[decision.id] || false}
+                                    checked={checkedDecisions[decision.id || ""] || false}
                                     onCheckedChange={(checked) =>
                                         setCheckedDecisions(prev => ({
                                             ...prev,
-                                            [decision.id]: !!checked
+                                            [decision.id || ""]: !!checked
                                         }))
                                     }
                                 />
                                 <p className="break-words">
                                     <strong>{idx + 1}.</strong> {decision.j_juridiction}-{decision.j_ville}-{decision.j_date}-{decision.j_rg}
-                                    {annotations[decision.id]?.length > 0 && (
+                                    {annotations[decision.id || ""]?.length > 0 && (
                                         <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                                            {annotations[decision.id].length} annotation(s)
+                                            {annotations[decision.id || ""].length} annotation(s)
                                         </span>
                                     )}
                                 </p>
@@ -409,19 +410,19 @@ const ExtractiveAnnotationValidation: React.FC = () => {
                 <Card className="flex-1 flex flex-col m-4">
                     <CardContent className="flex flex-col h-full p-0">
                         {/* Headers Container */}
-                        <div className="sticky top-0 z-20 bg-white">
+                        <div className="sticky top-0 bg-white">
                             {/* Total Annotation Counts */}
-                            <div className="p-2 border-b flex justify-start">
+                            {/* <div className="p-2 border-b flex justify-start">
                                 <h3 className="text-lg font-semibold mr-8">Total des annotations</h3>
                                 <div className="flex space-x-4">
                                     {labels.map((label) => (
                                         <div key={label.id} className="flex items-center">
                                             <span className="mr-2" style={{ color: label.color }}>●</span>
-                                            <span>{label.label}: {totalAnnotationCounts[label.id] || 0}</span>
+                                            <span>{label.label}: {totalAnnotationCounts[label.id || 0] || 0}</span>
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </div> */}
 
                             {/* Labels and Settings */}
                             <div className="p-2 border-b flex items-center">
@@ -439,15 +440,23 @@ const ExtractiveAnnotationValidation: React.FC = () => {
                                 />
                                 <div className="flex space-x-2 overflow-x-auto">
                                     {labels.map((label) => (
+                                        <div>
+
                                         <button
                                             key={label.id}
                                             style={{ backgroundColor: label.color }}
                                             onClick={() => setCurrentLabel(label)}
                                             className={`px-3 py-1 rounded border transition-colors duration-200 whitespace-nowrap ${currentLabel?.id === label.id ? "border-blue-500 shadow-lg font-bold" : "border-transparent"
-                                                }`}
-                                        >
+                                            }`}
+                                            >
                                             {label.label}
                                         </button>
+                                        <span
+                                        className="ml-2 text-s"
+                                        title={`Total: ${totalAnnotationCounts[label.id || 0] || 0}`}
+                                        >{totalAnnotationCounts[label.id || 0] || 0}</span>
+                                        
+                                            </div>
                                     ))}
                                 </div>
                             </div>

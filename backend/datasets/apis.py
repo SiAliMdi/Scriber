@@ -3,7 +3,7 @@ from rest_framework import views, permissions, response, request
 
 from categories.models import CategoriesModel
 
-from .models import DatasetsModel, Labels as LabelsModel, DatasetsLabelsModel
+from .models import DatasetsModel, Labels as LabelsModel#, DatasetsLabelsModel
 from users import services as users_services
 from . import services as datasets_services
 from .serializers import  DatasetsSerializer, LabelsSerializer
@@ -86,6 +86,7 @@ class Dataset(views.APIView):
             validated_data = serialized_data.validated_data
             validated_data['creator'] = request.user                
             validated_data['categorie'] = CategoriesModel.objects.get(id=validated_data['categorie'])
+            print('validated_data :', validated_data)
             dataset = DatasetsModel.objects.create(**validated_data)
             dataset = DatasetsSerializer(dataset)
             return response.Response(dataset.data, status=200)
@@ -99,7 +100,12 @@ class Dataset(views.APIView):
         serializer = DatasetsSerializer(data=request.data, partial=True, instance=dataset)
         if serializer.is_valid():
             serialized_data = serializer.validated_data
-            serializer.update(instance=DatasetsModel.objects.get(id=dataset_id), validated_data=serialized_data, updater=request.user)
+            print('serialized_data :', serialized_data)
+            # print('dataset_id :', dataset_id)
+            instance = DatasetsModel.objects.get(id=dataset_id)
+            # print('instance :', instance)
+            serializer.update(instance=instance, validated_data=serialized_data, updater=request.user)
+            print('serializer :', serializer.validated_data)
             serialized_data['categorie'] = CategoriesSerializer(serialized_data['categorie']).data
             serialized_data['creator'] = UserSerializer(serialized_data['creator']).data
             return response.Response(data=serialized_data, status=200)

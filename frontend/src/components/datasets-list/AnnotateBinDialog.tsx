@@ -18,7 +18,7 @@ import AiModel, { Training } from "@/@types/ai-model";
 interface AnnotateDialogProps {
   categoryId: string;
   datasetId: string;
-  datasetSerialNumber: string;
+  datasetSerialNumber: number | undefined;
 }
 
 const AnnotateDialog = ({ categoryId, datasetId, datasetSerialNumber }: AnnotateDialogProps) => {

@@ -6,7 +6,7 @@ import DataTableRowActions from "../ui/DataTableRowActions";
 
 
 export interface UsersColumnsProps {
-    setUsers: (value: User[]) => void;
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>;
     onEdit: (value: User) => void;
     onDelete: (value: User) => void;
 }
@@ -87,9 +87,9 @@ const getColumns = ({ setUsers, onEdit, onDelete }: UsersColumnsProps): ColumnDe
         },
         id: "lastLogin",
         accessorFn: row => row?.lastLogin ? new Date(row.lastLogin).toLocaleString() : "Never",
-        sortingFn: (rowA, rowB, columnId) => {
-            const dateA = new Date(rowA.original[columnId]).getTime();
-            const dateB = new Date(rowB.original[columnId]).getTime();
+        sortingFn: (rowA, rowB,) => {
+            const dateA = new Date(rowA.original.lastLogin || 0).getTime();
+            const dateB = new Date(rowB.original.lastLogin || 0).getTime();
             return dateA - dateB;
         },
 
