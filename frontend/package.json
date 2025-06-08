@@ -8,6 +8,7 @@
   },
   "scripts": {
     "preinstall": "npx npm-force-resolutions",
+    "analyze": "npx vite-bundle-analyzer --report dist/stats.json",
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
@@ -43,6 +44,7 @@
     "redux-persist": "^6.0.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
+    "terser": "^5.41.0",
     "typesense": "^2.0.0-5",
     "uuid": "^11.1.0"
   },
