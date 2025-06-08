@@ -2,20 +2,20 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import BasePage from "./BasePage";
 import { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/ui/DataTable";
-import  AiModel  from "@/@types/ai-model";
+import AiModel from "@/@types/ai-model";
 import { Button } from "@/components/ui/button"
 import CreateDialog from "@/components/ai-models-list/CreateDialog";
-import {  fetchAiModels,createAiModel,  editAiModel, deleteAiModel } from "@/services/AiModelsServices";
+import { fetchAiModels, createAiModel, editAiModel, deleteAiModel } from "@/services/AiModelsServices";
 import { useToast } from "@/components/ui/use-toast";
 import getColumns from "@/components/ai-models-list/Columns";
-import {useLocation} from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 
 const ModelsPage = () => {
     const [AiModels, setAiModels] = useState<AiModel[]>([])
     const [columns, setColumns] = useState<ColumnDef<AiModel>[]>([]);
     const [createDialogOpen, setCreateDialogOpen] = useState(false)
-    const [nextSerialNumber, setNextSerialNumber] = useState(0);
+    const [, setNextSerialNumber] = useState(0);
     const { toast } = useToast();
     const location = useLocation();
 
@@ -53,12 +53,12 @@ const ModelsPage = () => {
 
     useMemo(() =>
         setColumns(getColumns({ setAiModels: setAiModels, onEdit: onEdit, onDelete: onDelete })),
-        [ onEdit, onDelete]);
-    
+        [onEdit, onDelete]);
+
     useEffect(() => {
         fetchAiModels(location.state.categoryId, setAiModels);
     }, [])
-    
+
     return <div className="xl:w-screen">
         {<BasePage />}
         <div className="container mx-auto py-2 max-h-screen xl:w-full">
@@ -66,12 +66,12 @@ const ModelsPage = () => {
             <Button variant="secondary" className="bg-blue-500 text-white float-right mx-1 my-2" onClick={() => {
                 setNextSerialNumber(AiModels.length + 1);
                 setCreateDialogOpen(true)
-                }}>Ajouter un modèle d'IA
+            }}>Ajouter un modèle d'IA
 
             </Button>
             {
-                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} nextSerialNumber={nextSerialNumber} createAiModel={createAiModel} setAiModels={setAiModels} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
-                 />
+                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} createAiModel={createAiModel} setAiModels={setAiModels} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
+                />
             }
 
             <DataTable columns={columns} data={AiModels} />

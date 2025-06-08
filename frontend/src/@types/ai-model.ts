@@ -14,6 +14,22 @@ type AiModel = {
   serialNumber?: string;
 };
 
+export type fetchedAiModel = {
+  id?: string;
+  name: string;
+  description?: string;
+
+  created_at?: Date;
+  updated_at?: Date;
+  category: string;
+  model_type?: string;
+  type?: string;
+  model_path?: string;
+  creator?: string;
+  deleted?: boolean;
+  serial_number?: string;
+};
+
 export interface AiModelType {
   id: string;
   type: string;

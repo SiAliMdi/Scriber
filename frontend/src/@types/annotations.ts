@@ -20,6 +20,7 @@ type TextAnnotation = {
         id: string;
         label: string;
         color: string;
+        description?: string;
     };
     decision: string;
     state?: string;
@@ -35,6 +36,14 @@ type ExtractionAnnotations = {
     created_at: string; // ISO timestamp
     updated_at: string; // ISO timestamp
   };
+
+  type AnnotationData = {
+    text: string;
+    start_offset: number;
+    end_offset: number;
+    label: string; // UUID of the label
+    decision: string; // UUID of the decision
+};
   
   type ExtractionTextAnnotation = {
     id: string; // UUID
@@ -45,4 +54,4 @@ type ExtractionAnnotations = {
     label?: string;
   };
   
-export type { BinaryAnnotation, TextAnnotation, ExtractionAnnotations, ExtractionTextAnnotation };
+export type { BinaryAnnotation, TextAnnotation, ExtractionAnnotations, ExtractionTextAnnotation, AnnotationData };

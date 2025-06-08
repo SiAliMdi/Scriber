@@ -8,19 +8,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import EditDialog, { EditDialogProps } from './EditDialog';
-import ReadDialog, { ReadDialogProps } from './PromptDialog';
+import EditDialog from './EditDialog';
+import ReadDialog from './PromptDialog';
+import { Prompt } from '@/@types/prompt';
 
-interface DataTableRowActionsProps<TData> {
-  row: Row<TData>;
-  setPrompts: (value: TData[]) => void;
-  onEdit: (value: TData) => void;
-  onDelete: (value: TData) => void;
+interface DataTableRowActionsProps {
+  row: Row<Prompt>;
+  setPrompts: React.Dispatch<React.SetStateAction<Prompt[]>>;
+  onEdit: (value: Prompt) => void;
+  onDelete: (value: Prompt) => void;
 }
 
 
 
-const DataTableRowActions = <TData,>({ row, setPrompts, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
+const DataTableRowActions = ({ row, setPrompts, onEdit, onDelete }: DataTableRowActionsProps) => {
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
       <DropdownMenu>
@@ -32,8 +33,8 @@ const DataTableRowActions = <TData,>({ row, setPrompts, onEdit, onDelete }: Data
         <DropdownMenuContent align="end">
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
-          <ReadDialog {...{ row } as ReadDialogProps<TData>} />
-          <EditDialog {...{ row, onEdit, setPrompts, } as EditDialogProps<TData>} />
+          <ReadDialog {...{ row }} />
+          <EditDialog {...{ row, onEdit, setPrompts, }} />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
         </DropdownMenuContent>

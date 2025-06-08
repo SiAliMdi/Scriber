@@ -16,14 +16,15 @@ import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
 import { editCategorie } from "@/services/CategoriesServices";
+import { Categorie } from "@/@types/categorie"
 
-interface EditDialogProps<TData> {
-    row: Row<TData>;
-    onEdit: (value: TData) => void;
-    setCategories: (value: TData[]) => void;
+interface EditDialogProps {
+    row: Row<Categorie>;
+    // onEdit: (value: Categorie) => void;
+    setCategories: React.Dispatch<React.SetStateAction<Categorie[]>>;
 }
 
-const EditDialog = <TData,>({ row, onEdit, setCategories }: EditDialogProps<TData>) => {
+const EditDialog = ({ row,  setCategories }: EditDialogProps) => {
 
     const [nomenclature, setNomenclature] = useState(row.original.nomenclature);
     const [code, setCode] = useState(row.original.code);
@@ -49,7 +50,7 @@ const EditDialog = <TData,>({ row, onEdit, setCategories }: EditDialogProps<TDat
        
         editCategorie(categorie).then((response) => {
             if (response === 200) {
-                setCategories((prev: TData[]) => {
+                setCategories((prev: Categorie[]) => {
                     const index = prev.findIndex(u => u.id === categorie.id);
                     prev[index] = categorie;
                     return [...prev];

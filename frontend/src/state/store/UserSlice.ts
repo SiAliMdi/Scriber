@@ -17,7 +17,7 @@ export const loginUser = createAsyncThunk( 'user/loginUser', async (data: { emai
     }
 } );
 
-export const logoutUser = createAsyncThunk('user/logoutUser', async ({}, thunkAPI) => {
+export const logoutUser = createAsyncThunk('user/logoutUser', async (_, thunkAPI) => {
     try {
         const token = sessionStorage.getItem('token');
           const request = await axios.post(import.meta.env.VITE_BACKEND_APP_API_URL + 'users/logout/', {}, {

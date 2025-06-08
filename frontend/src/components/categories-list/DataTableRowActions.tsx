@@ -8,20 +8,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
-import EditDialog, { EditDialogProps } from './EditDialog';
-import ReadDialog, { ReadDialogProps } from './CategoryDialog';
+import EditDialog from './EditDialog';
+import ReadDialog from './CategoryDialog';
 import { useNavigate } from 'react-router-dom';
+import { Categorie } from '@/@types/categorie';
 
-interface DataTableRowActionsProps<TData> {
-  row: Row<TData>;
-  setCategories: (value: TData[]) => void;
-  onEdit: (value: TData) => void;
-  onDelete: (value: TData) => void;
+interface DataTableRowActionsProps {
+  row: Row<Categorie>;
+  setCategories: React.Dispatch<React.SetStateAction<Categorie[]>>;
+  // onEdit: (value: Categorie) => void;
+  onDelete: (value: Categorie) => void;
 }
 
 
 
-const DataTableRowActions = <TData,>({ row, setCategories, onEdit, onDelete }: DataTableRowActionsProps<TData>) => {
+const DataTableRowActions = ({ row, setCategories,  onDelete }: DataTableRowActionsProps) => {
   const navigate = useNavigate();
   return (
     <div className="flex items-center justify-end h-1 hover:cursor-pointer">
@@ -34,8 +35,8 @@ const DataTableRowActions = <TData,>({ row, setCategories, onEdit, onDelete }: D
         <DropdownMenuContent align="end">
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
-          <ReadDialog {...{ row } as ReadDialogProps<TData>} />
-          <EditDialog {...{ row, onEdit, setCategories, } as EditDialogProps<TData>} />
+          <ReadDialog {...{ row } } />
+          <EditDialog {...{ row, setCategories, }} />
           <DropdownMenuSeparator />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => navigate(`/datasets/${row.original.id}`,

@@ -17,16 +17,16 @@ import AiModel, { AiModelType } from "@/@types/ai-model";
 import { useEffect, useState } from "react"
 import { fetchAiModelTypes } from "@/services/AiModelsServices"
 
-interface CreateDialogProps<TData> {
+interface CreateDialogProps {
     categoryId: string;
-    nextSerialNumber: number;
-    createAiModel : (AiModel: TData) => Promise<unknown>;
+    // nextSerialNumber: number;
+    createAiModel : (AiModel: AiModel) => Promise<any>;
     createDialogOpen: boolean;
     setCreateDialogOpen: (value: boolean) => void;
-    setAiModels: (value: TData[]) => void;
+    setAiModels: React.Dispatch<React.SetStateAction<AiModel[]>>;
 }
 
-const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, createDialogOpen, setCreateDialogOpen, setAiModels }: CreateDialogProps<TData>) => {
+const CreateDialog = ({categoryId,  createAiModel, createDialogOpen, setCreateDialogOpen, setAiModels }: CreateDialogProps) => {
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
@@ -39,26 +39,27 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
     const handleSave = (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
         event.preventDefault();
 
-        const model : AiModel = modelType !== "extractif" ? 
-        {
-            name,
-            description,
-            modelType,
-            type: aiModelType,
-            category: categoryId,
-        } : {
-            name,
-            description,
-            modelType,
-            category: categoryId,
-        };
+        const model: AiModel = modelType !== "extractif"
+            ? {
+                name,
+                description,
+                modelType,
+                type: aiModelType,
+                category: categoryId,
+            } as AiModel
+            : {
+                name,
+                description,
+                modelType,
+                category: categoryId,
+            } as AiModel;
 
         createAiModel(model).then((response) => {
             if (response.status === 200) {
                 model.serialNumber = response.data.serial_number;
                 model.createdAt = response.data.created_at;
                 model.id = response.data.id;
-                setAiModels((prev: TData[]) => [...prev, model]);
+                setAiModels((prev: AiModel[]) => [...prev, model]);
                 toast({
                     title: "Model create success",
                     duration: 5000,
@@ -90,8 +91,8 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
     useEffect(() => {
         fetchAiModelTypes().then(
             data => {
-                setaiModelTypes(data);
-                if (data.length > 0) {
+                setaiModelTypes(data ?? []);
+                if (data && data.length > 0) {
                     setaiModelType(data[0].type);
                 }
             }
@@ -140,13 +141,13 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createAiModel, crea
                         <div className="flex items-center space-x-2 justify-center  col-span-3">
 
     <RadioGroupItem value="classification binaire" id="binary" className="cursor-pointer" 
-     onClick={ e => setModelType("classification binaire")}
+     onClick={ () => setModelType("classification binaire")}
     />
     <Label htmlFor="binary" className="cursor-pointer">Modèle de classification binaire</Label>
     </div>
   <div className="flex items-center space-x-2 justify-center col-span-3">
     <RadioGroupItem value="extractif" id="extractive" className="cursor-pointer" 
-    onClick={ e => setModelType("extractif")}
+    onClick={ () => setModelType("extractif")}
     />
     <Label htmlFor="extractive" className="cursor-pointer">Modèle extractive</Label>
   </div>

@@ -54,12 +54,14 @@ const CreateCategory = ({ createCategorieOpen, setCreateCategorieOpen }: CreateD
                 const dataset : Dataset = {
                     name: "dataset-1",
                     description: "",
-                    categorie: categorie.id
+                    categorie: categorie.id,
+                    size: 0,
+                    annotatedDecisions: 0
                 };
                 createDataset(dataset).then((response) => {
                     if (response.status === 200) {
                         dataset.serialNumber = response.data.serial_number;
-                        dataset.createdAt = response.data.created_at;
+                        dataset.createdAt = new Date(response.data.created_at);
                         dataset.size = 0;
                         dataset.annotatedDecisions = 0;
                         dataset.id = response.data.id;

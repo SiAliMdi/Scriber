@@ -43,8 +43,10 @@ class DatasetsSerializer(serializers.ModelSerializer):
     def update(self, instance, validated_data, updater=None):
         validated_data['categorie'] = instance.categorie
         validated_data['creator'] = instance.creator
+        print("updater", updater)
         if updater:
             instance.updater = updater
         instance = super().update(instance, validated_data)
+        print("updater 2", updater)
         return instance
     

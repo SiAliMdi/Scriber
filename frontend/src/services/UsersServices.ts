@@ -17,7 +17,8 @@ const activateUser = async (user: User) => {
     );
     return response.status;
   } catch (error) {
-    return error.response.status;
+    console.error("Error activating user:", error);
+    throw error;
   }
 };
 
@@ -36,7 +37,8 @@ const deleteUser = async (user: User) => {
     );
     return response.status;
   } catch (error) {
-    return error.response.status;
+    console.error("Error deleting user:", error);
+    throw error;
   }
 };
 

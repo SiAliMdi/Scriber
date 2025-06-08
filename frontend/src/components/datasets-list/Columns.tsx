@@ -6,12 +6,12 @@ import DataTableRowActions from "./DataTableRowActions";
 
 
 export interface DatasetsColumnsProps {
-    setDatasets: (value: Dataset[]) => void;
-    onEdit: (value: Dataset) => void;
+    setDatasets: React.Dispatch<React.SetStateAction<Dataset[]>>;
+    // onEdit: (value: Dataset) => void;
     onDelete: (value: Dataset) => void;
 }
 
-const getColumns =  ({ setDatasets, onEdit, onDelete }: DatasetsColumnsProps): ColumnDef<Dataset>[] => [
+const getColumns =  ({ setDatasets,  onDelete }: DatasetsColumnsProps): ColumnDef<Dataset>[] => [
     {
         header: ({ column }) => {
             return (
@@ -77,7 +77,7 @@ const getColumns =  ({ setDatasets, onEdit, onDelete }: DatasetsColumnsProps): C
         id: "size",
         accessorKey : "size",
     },
-    {
+    /* {
         header: ({ column }) => {
             return (
                 <Button
@@ -92,7 +92,7 @@ const getColumns =  ({ setDatasets, onEdit, onDelete }: DatasetsColumnsProps): C
         },
         id: "annotatedDecisions",
         accessorKey : "annotatedDecisions",
-    },
+    }, */
     {
         header: ({ column }) => {
             return (
@@ -108,16 +108,16 @@ const getColumns =  ({ setDatasets, onEdit, onDelete }: DatasetsColumnsProps): C
         },
         id: "createdAt",
         accessorFn: row => row?.createdAt ? new Date(row.createdAt).toLocaleString() : "Never",
-        sortingFn: (rowA, rowB, columnId) => {
-            const dateA = new Date(rowA.original[columnId]).getTime();
-            const dateB = new Date(rowB.original[columnId]).getTime();
+        sortingFn: (rowA, rowB) => {
+            const dateA = new Date(rowA.original.createdAt ?? 0).getTime();
+            const dateB = new Date(rowB.original.createdAt ?? 0).getTime();
             return dateA - dateB;
         },
 
     },
     {
         id: "actions",
-        cell: ({ row }) => { return <DataTableRowActions row={row} setDatasets={setDatasets} onEdit={onEdit} onDelete={onDelete} /> },
+        cell: ({ row }) => { return <DataTableRowActions row={row} setDatasets={setDatasets} onDelete={onDelete} /> },
         size: 10,
     }
 ]

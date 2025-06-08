@@ -18,6 +18,7 @@ export const UserProvider: React.FC<React.ReactNode> = ( children ) => {
         getUser().then((response) => {
             setUser(response);
         } ).catch((error) => {
+            console.error("Error fetching user:", error);
             navigate('/login');
         }
     );

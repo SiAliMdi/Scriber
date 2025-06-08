@@ -16,14 +16,15 @@ import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
 import { editPrompt } from "@/services/PromptsServices"
+import { Prompt } from "@/@types/prompt"
 
-interface EditDialogProps<TData> {
-    row: Row<TData>;
-    onEdit: (value: TData) => void;
-    setPrompts: (value: TData[]) => void;
+interface EditDialogProps {
+    row: Row<Prompt>;
+    onEdit: (value: Prompt) => void;
+    setPrompts: React.Dispatch<React.SetStateAction<Prompt[]>>;
 }
 
-const EditDialog = <TData,>({ row, onEdit, setPrompts }: EditDialogProps<TData>) => {
+const EditDialog =  ({ row, onEdit, setPrompts }: EditDialogProps) => {
 
     const [prompt, setPrompt] = useState(row.original.prompt);
     const [jsonTemplate, setJsonTemplate] = useState(row.original.jsonTemplate);
@@ -38,7 +39,7 @@ const EditDialog = <TData,>({ row, onEdit, setPrompts }: EditDialogProps<TData>)
 
         editPrompt(newPrompt).then((response) => {
             if (response === 200) {
-                setPrompts((prev: TData[]) => {
+                setPrompts((prev: Prompt[]) => {
                     const index = prev.findIndex(u => u.id === newPrompt.id);
                     prev[index] = newPrompt;
                     return [...prev];

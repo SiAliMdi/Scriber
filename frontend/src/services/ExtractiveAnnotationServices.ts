@@ -1,8 +1,9 @@
 // src/services/AnnotationServices.ts
 import axios from "axios";
 import { Decision } from "@/@types/decision";
-import { TextAnnotation } from "@/@types/annotations";
+import { AnnotationData, TextAnnotation } from "@/@types/annotations";
 import { User } from "@/@types/user";
+import { DatasetDecision, DecisionWithAnnotations } from "@/@types/extAnnotations";
 
 export const fetchTextDecisionsWithAnnotations = async (
   datasetId: string,
@@ -31,7 +32,7 @@ export const fetchTextDecisionsWithAnnotations = async (
     const { decisions, total_annotation_counts } =
       response.data;
     const mappedDecisions: Decision[] = decisions.map(
-      (decision: any) => ({
+      (decision: DatasetDecision) => ({
         id: decision.id,
         j_texte: decision.raw_decision.texte_net,
         j_chambre: decision.raw_decision.j_chambre,
@@ -47,9 +48,9 @@ export const fetchTextDecisionsWithAnnotations = async (
       string,
       TextAnnotation[]
     > = {};
-    decisions.map((decision: any) => {
-      annotationsByDecision[decision.id] =
-        decision.annotations.map((annotation: any) => ({
+    decisions.map((decision: DecisionWithAnnotations) => {
+      annotationsByDecision[decision.id || ""] =
+        decision.annotations.map((annotation: TextAnnotation) => ({
           id: annotation.id,
           text: annotation.text,
           start_offset: annotation.start_offset,
@@ -73,7 +74,7 @@ export const fetchTextDecisionsWithAnnotations = async (
 };
 
 export const createAnnotation = async (
-  annotationData: any
+  annotationData: AnnotationData
 ) => {
   const token = sessionStorage.getItem("token");
   try {

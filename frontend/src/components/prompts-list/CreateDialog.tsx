@@ -11,19 +11,19 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import {Prompt, JSONObject} from "@/@types/prompt";
-import { useState } from "react"
+import {Prompt, JSONObject, CreatePromptResponse} from "@/@types/prompt";
+import React, { useState } from "react"
 
-interface CreateDialogProps<TData> {
+interface CreateDialogProps {
     categoryId: string;
-    nextSerialNumber: number;
-    createPrompt : (Prompt: TData) => Promise<unknown>;
+    // nextSerialNumber: number;
+    createPrompt : (Prompt: Prompt) => Promise<CreatePromptResponse>;
     createDialogOpen: boolean;
     setCreateDialogOpen: (value: boolean) => void;
-    setPrompts: (value: TData[]) => void;
+    setPrompts:  React.Dispatch<React.SetStateAction<Prompt[]>>;
 }
 
-const CreateDialog = <TData,>({categoryId, nextSerialNumber, createPrompt, createDialogOpen, setCreateDialogOpen, setPrompts }: CreateDialogProps<TData>) => {
+const CreateDialog = ({categoryId,  createPrompt, createDialogOpen, setCreateDialogOpen, setPrompts }: CreateDialogProps) => {
 
     const [promptText, setPromptText] = useState("");
     const [jsonTemplate, setJsonTemplate] = useState<JSONObject>({} as JSONObject);
@@ -42,9 +42,9 @@ const CreateDialog = <TData,>({categoryId, nextSerialNumber, createPrompt, creat
         createPrompt(newPrompt).then((response) => {
             if (response.status === 200) {
                 newPrompt.serialNumber = response.data.serial_number;
-                newPrompt.createdAt = response.data.created_at;
+                newPrompt.createdAt = new Date(response.data.created_at);
                 newPrompt.id = response.data.id;
-                setPrompts((prev: TData[]) => [...prev, newPrompt]);
+                setPrompts((prev: Prompt[]) => [...prev, newPrompt]);
                 toast({
                     title: "Prompt create success",
                     duration: 5000,

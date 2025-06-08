@@ -12,18 +12,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Row } from "@tanstack/react-table"
 import { Switch } from "@/components/ui/switch"
-import { useState } from "react"
+import React, { useState } from "react"
 import { activateUser } from "@/services/UsersServices"
 import { useToast } from "@/components/ui/use-toast"
 import cloneDeep from 'lodash/cloneDeep';
+import { User } from "@/@types/user"
 
-interface EditDialogProps<TData> {
-    row: Row<TData>;
-    onEdit: (value: TData) => void;
-    setUsers: (value: TData[]) => void;
+interface EditDialogProps {
+    row: Row<User>;
+    // onEdit: (value: User) => void;
+    setUsers: React.Dispatch<React.SetStateAction<User[]>>;
 }
 
-const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) => {
+const EditDialog = ({ row,  setUsers }: EditDialogProps) => {
 
     const [isStaff, setIsStaff] = useState(row.original.isStaff);
     const { toast } = useToast();
@@ -35,7 +36,7 @@ const EditDialog = <TData,>({ row, onEdit, setUsers }: EditDialogProps<TData>) =
 
         activateUser(user).then((response) => {
             if (response === 200) {
-                setUsers((prev: TData[]) => {
+                setUsers((prev: User[]) => {
                     const index = prev.findIndex(u => u.id === user.id);
                     prev[index] = user;
                     return [...prev];

@@ -10,12 +10,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Row } from "@tanstack/react-table"
+import { Categorie } from "@/@types/categorie"
 
-interface ReadDialogProps<TData> {
-    row: Row<TData>; 
+interface ReadDialogProps {
+    row: Row<Categorie>; 
 }
 
-const ReadDialog = <TData,>({ row }: ReadDialogProps<TData>) => {
+const ReadDialog = ({ row }: ReadDialogProps) => {
 
     return (<Dialog >
             <DialogTrigger asChild>

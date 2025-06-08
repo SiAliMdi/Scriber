@@ -1,4 +1,4 @@
-import { Prompt } from "@/@types/prompt";
+import { CreatePromptResponse, fetchedPrompt, Prompt } from "@/@types/prompt";
 import axios from "axios";
 
 
@@ -16,7 +16,7 @@ const fetchPrompts = async (categoryId: string, setPrompts: React.Dispatch<React
     )
     .then((response) => {
       const prompts: Prompt[] = response.data.map(
-        (prompt: Prompt) => {
+        (prompt: fetchedPrompt) => {
             return {
                 id: prompt.id,
                 prompt: prompt.prompt,
@@ -37,7 +37,7 @@ const fetchPrompts = async (categoryId: string, setPrompts: React.Dispatch<React
     });
 }
 
-const createPrompt = async (dataset: Prompt) => {
+const createPrompt = async (dataset: Prompt): Promise<CreatePromptResponse> => {
   try {
     const response = await axios.post(
       `${import.meta.env.VITE_BACKEND_APP_API_URL}ai_models/prompts/new/`,
@@ -52,7 +52,8 @@ const createPrompt = async (dataset: Prompt) => {
     );
     return response;
   } catch (error) {
-    return error;
+    console.error("Error creating prompt:", error);
+    throw error;
   }
 }
 

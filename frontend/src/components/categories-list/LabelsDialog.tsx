@@ -11,16 +11,19 @@ import { Row } from "@tanstack/react-table"
 import { useEffect, useState } from "react"
 import {fetchLabels, updateLabel, deleteLabel} from "@/services/LabelsServices";
 import { NewLabelAlertDialog } from "./NewLabelAlertDialog"
+import { Dataset } from "@/@types/dataset"
+import { Label } from "@/@types/label"
 
-interface LabelsDialogProps<TData> {
-    row: Row<TData>;
+interface LabelsDialogProps {
+    row: Row<Dataset>;
 }
 
-const LabelsDialog = <TData,>({ row }: LabelsDialogProps<TData>) => {
+const LabelsDialog = ({ row }: LabelsDialogProps) => {
 
-    const [labels, setLabels] = useState(row.original.labels);
+    const [labels, setLabels] = useState<Label[] >(row.original.labels || []);
+    
     useEffect(() => {
-        fetchLabels(row.original.id, setLabels);
+        fetchLabels(row.original.id || "", setLabels);
     }, [row.original.labels]);
    
     return (
@@ -34,7 +37,7 @@ const LabelsDialog = <TData,>({ row }: LabelsDialogProps<TData>) => {
                 <DialogContent className="w-11/12 max-w-none mx-0">
                     <DialogHeader>
                         <DialogTitle>Labels du dataset {row.original.serialNumber} </DialogTitle>
-                        <NewLabelAlertDialog datasetId={row.original.id}
+                        <NewLabelAlertDialog datasetId={row.original.id || ""}
                          labels={labels} setLabels={setLabels} />
                     </DialogHeader>
                     <div className="grid gap-1 py-1 w-full mx-0 px-0">

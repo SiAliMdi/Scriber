@@ -6,7 +6,7 @@ import DataTableRowActions from "./DataTableRowActions"
 
 
 export interface AiModelsColumnsProps {
-    setAiModels: (value: AiModel[]) => void;
+    setAiModels: React.Dispatch<React.SetStateAction<AiModel[]>>;
     onEdit: (value: AiModel) => void;
     onDelete: (value: AiModel) => void;
 }
@@ -129,9 +129,9 @@ const getColumns = ({ setAiModels, onEdit, onDelete }: AiModelsColumnsProps): Co
         },
         id: "createdAt",
         accessorFn: row => row?.createdAt ? new Date(row.createdAt).toLocaleString() : "Never",
-        sortingFn: (rowA, rowB, columnId) => {
-            const dateA = new Date(rowA.original[columnId]).getTime();
-            const dateB = new Date(rowB.original[columnId]).getTime();
+        sortingFn: (rowA, rowB) => {
+            const dateA = new Date(rowA.original.createdAt ?? 0).getTime();
+            const dateB = new Date(rowB.original.createdAt ?? 0).getTime();
             return dateA - dateB;
         },
 

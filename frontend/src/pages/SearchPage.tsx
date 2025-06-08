@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import {  useEffect, useState } from "react";
 import BasePage from "./BasePage";
 import {
   DropdownMenu,
@@ -19,16 +19,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchParameters, Keyword, SearchResult, Decision } from "@/@types/search"
 import { CreateCategory } from "@/components/search-components/CreateCategory";
-import CreateDialog from "@/components/datasets-list/CreateDialog";
-import { createDataset } from "@/services/DatasetsServices";
+/* import CreateDialog from "@/components/datasets-list/CreateDialog";
+import { createDataset } from "@/services/DatasetsServices"; */
 
 
 const SearchPage = () => {
   const [categoriesDatasets, setCategoriesDatasets] = useState<Map<Categorie, Dataset[]>>(new Map<Categorie, Dataset[]>());
   const [villes, setVilles] = useState<string[]>(["Toutes les villes"]);
-  const [isSearching, setIsSearching] = useState<boolean>(false);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [datasets, setDatasets] = useState<Dataset[]>([])
+   const [isSearching, ] = useState<boolean>(false);
+  //const isSearching = false;
+  // const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [datasets, ] = useState<Dataset[]>([])
+  //const datasets : Dataset[] = [];
   const [searchParameters, setSearchParameters] = useState<SearchParameters>({
     q: "",
     query_by: "j_texte",
@@ -72,7 +74,7 @@ const SearchPage = () => {
     j_juridiction: "",
     highlight: "",
   });
-  const [pageSize, setPageSize] = useState<number>(250);
+  const [pageSize, ] = useState<number>(250);
   const [keywordsValue, setKeywordsValue] = useState<string[]>([]);
   const [createCategorieOpen, setCreateCategorieOpen] = useState<boolean>(false);
 
@@ -86,7 +88,7 @@ const SearchPage = () => {
     setCategoriesDatasets((prev) => {
       const newMap = new Map(prev);
       datasets.forEach((dataset) => {
-        const categoryKey = Array.from(newMap.keys()).find((key) => key.id === dataset.categorieId);
+        const categoryKey = Array.from(newMap.keys()).find((key) => key.id === dataset.categorie);
         if (categoryKey) {
           const categoryDatasets = newMap.get(categoryKey) || [];
           newMap.set(categoryKey, [...categoryDatasets, dataset]);
@@ -254,7 +256,7 @@ const SearchPage = () => {
     );
   }
 
-  function toggleSelectAll(event: FormEvent<HTMLButtonElement>): void {
+  function toggleSelectAll(): void {
 
     if (selectAll) {
       setSelectAll(false);
@@ -265,7 +267,7 @@ const SearchPage = () => {
     }
   }
 
-  function handleAssocier(event: MouseEvent<HTMLButtonElement, MouseEvent>): void {
+  function handleAssocier(): void {
     console.log("Associer les décisions: ", selectedDecisions);
     for (let index = 0; index < selectedDatasets.length; index++) {
       const dataset = selectedDatasets[index];
@@ -315,13 +317,13 @@ const SearchPage = () => {
                   className="absolute z-50 overflow-y-scroll max-h-64 bg-white border rounded shadow-lg w-48"
                   onCloseAutoFocus={(e) => e.preventDefault()} // Prevent focus loss
                 >
-                  {Array.from(categoriesDatasets.keys()).map((categorie, i) => (
+                  {Array.from(categoriesDatasets.keys()).map((categorie) => (
                     <div key={categorie.id}>
                       <div className="flex items-center space-x-2">
                         <DropdownMenuLabel>{`${categorie.serialNumber}-${categorie.nomenclature}-${categorie.code}`}</DropdownMenuLabel>
                       </div>
                       {categoriesDatasets.get(categorie)?.map((dataset, index) => (
-                        index != categoriesDatasets.get(categorie)?.length -1 ? (
+                        categoriesDatasets.get(categorie) && index !== (categoriesDatasets.get(categorie)!.length - 1) ? (
                         <DropdownMenuItem
                           key={dataset.id}
                           onSelect={(e) => e.preventDefault()} // Prevent default selection behavior
@@ -332,10 +334,10 @@ const SearchPage = () => {
                           >
                             <Checkbox
                               id={`dataset-${dataset.id}`}
-                              checked={selectedDatasets.includes(dataset.id)}
+                              checked={selectedDatasets.includes(dataset.id ||'')}
                               onCheckedChange={(checked) => {
                                 setSelectedDatasets(prev => checked
-                                  ? [...prev, dataset.id]
+                                  ? [...prev, dataset.id as string]
                                   : prev.filter(id => id !== dataset.id)
                                 );
                               }}
@@ -357,10 +359,10 @@ const SearchPage = () => {
                           >
                             <Checkbox
                               id={`dataset-${dataset.id}`}
-                              checked={selectedDatasets.includes(dataset.id)}
+                              checked={selectedDatasets.includes(dataset.id ||'')}
                               onCheckedChange={(checked) => {
                                 setSelectedDatasets(prev => checked
-                                  ? [...prev, dataset.id]
+                                  ? [...prev, ...(dataset.id ? [dataset.id] : [])]
                                   : prev.filter(id => id !== dataset.id)
                                 );
                               }}
@@ -456,21 +458,21 @@ const SearchPage = () => {
             <div className="flex gap-4 justify-items-start align-middle">
               <Checkbox id="ca" className="w-5 h-5" defaultChecked={true}
                 checked={selectedJuridictions.includes("ca")}
-                onClick={(e) =>
+                onClick={() =>
                   handleJuridictionChange(selectedJuridictions.includes("ca"), "ca")
                 }
               />
               <Label htmlFor="ca" className="cursor-pointer">Cours d'appel</Label>
               <Checkbox id="cc" className="w-5 h-5"
                 checked={selectedJuridictions.includes("cc")}
-                onClick={(e) =>
+                onClick={() =>
                   handleJuridictionChange(selectedJuridictions.includes("cc"), "cc")
                 }
               />
               <Label htmlFor="cc" className="cursor-pointer">Cour de cassation</Label>
               <Checkbox id="tj" className="w-5 h-5"
                 checked={selectedJuridictions.includes("tj")}
-                onClick={(e) =>
+                onClick={() =>
                   handleJuridictionChange(selectedJuridictions.includes("tj"), "tj")
                 }
               />
@@ -502,7 +504,7 @@ const SearchPage = () => {
                               id={"ville-" + i}
                               className="w-5 h-5"
                               checked={selectedVilles.includes(ville)}
-                              onClick={(e) => {
+                              onClick={() => {
                                 selectedVilles.includes(ville)
                                   ? setSelectedVilles(selectedVilles.filter((value) => value !== ville))
                                   : setSelectedVilles([...selectedVilles, ville])
@@ -556,7 +558,7 @@ const SearchPage = () => {
                   id="arret"
                   className="w-5 h-5"
                   checked={selectedTypes.includes("arret")}
-                  onClick={(e) =>
+                  onClick={() =>
                     selectedTypes.includes("arret")
                       ? setSelectedTypes(selectedTypes.filter((value) => value !== "arret"))
                       : setSelectedTypes([...selectedTypes, "arret"])
@@ -572,7 +574,7 @@ const SearchPage = () => {
                   id="ordonnance"
                   className="w-5 h-5"
                   checked={selectedTypes.includes("ordonnance")}
-                  onClick={(e) =>
+                  onClick={() =>
                     selectedTypes.includes("ordonnance")
                       ? setSelectedTypes(
                         selectedTypes.filter((value) => value !== "ordonnance")
@@ -590,7 +592,7 @@ const SearchPage = () => {
                   id="autre"
                   className="w-5 h-5"
                   checked={selectedTypes.includes("autre")}
-                  onClick={(e) =>
+                  onClick={() =>
                     selectedTypes.includes("autre")
                       ? setSelectedTypes(selectedTypes.filter((value) => value !== "autre"))
                       : setSelectedTypes([...selectedTypes, "autre"])
@@ -755,7 +757,7 @@ const SearchPage = () => {
                 </div>
                 <div
                   className="text-sm cursor-pointer"
-                  dangerouslySetInnerHTML={{ __html: decision.highlight }}
+                  dangerouslySetInnerHTML={{ __html: decision.highlight ?? "" }}
                   onClick={() => { setSelectedDecision(decision) }}
                 ></div>
               </div>

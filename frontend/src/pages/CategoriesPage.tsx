@@ -5,7 +5,7 @@ import { DataTable } from "@/components/ui/DataTable";
 import { Categorie } from "@/@types/categorie";
 import { Button } from "@/components/ui/button"
 import CreateDialog from "@/components/categories-list/CreateDialog";
-import { createCategorie, deleteCategorie, editCategorie, fetchCategories } from "@/services/CategoriesServices";
+import { createCategorie, deleteCategorie, fetchCategories } from "@/services/CategoriesServices";
 import { useToast } from "@/components/ui/use-toast";
 import getColumns from "@/components/categories-list/Columns";
 
@@ -17,7 +17,7 @@ const CategoriesPage = () => {
     const [nextSerialNumber, setNextSerialNumber] = useState(0);
     const { toast } = useToast();
 
-    const onEdit = useCallback((value: Categorie) => {
+    /* const onEdit = useCallback((value: Categorie) => {
         editCategorie(value).then((response) => {
             console.log(response);
         }
@@ -25,7 +25,7 @@ const CategoriesPage = () => {
             console.error(error);
         }
         );
-    }, []);
+    }, []); */
 
     const onDelete = useCallback((value: Categorie) => {
         deleteCategorie(value).then(response => {
@@ -50,8 +50,8 @@ const CategoriesPage = () => {
 
 
     useMemo(() =>
-        setColumns(getColumns({ setCategories: setCategories, onEdit: onEdit, onDelete: onDelete })),
-        [onEdit, onDelete]);
+        setColumns(getColumns({ setCategories: setCategories, onDelete: onDelete })),
+        [ onDelete]);
     //setColumns(getColumns()),
     // []);
 
@@ -65,12 +65,13 @@ const CategoriesPage = () => {
             <h1 className="text-2xl font-bold float-left mx-1 my-2">Catégories de demandes</h1>
             <Button variant="secondary" className="bg-blue-500 text-white float-right mx-1 my-2" onClick={() => {
                 setNextSerialNumber(categories.length + 1);
-                setCreateDialogOpen(true)
+                setCreateDialogOpen(true);
+                console.log(nextSerialNumber)
             }}>Ajouter une catégorie
 
             </Button>
             {
-                createDialogOpen && <CreateDialog nextSerialNumber={nextSerialNumber} createCategorie={createCategorie} setCategories={setCategories} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
+                createDialogOpen && <CreateDialog  createCategorie={createCategorie} setCategories={setCategories} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
                 />
             }
 

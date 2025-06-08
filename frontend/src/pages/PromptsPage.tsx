@@ -67,11 +67,12 @@ const PromptsPage = () => {
             <Button variant="secondary" className="bg-blue-500 text-white float-right mx-1 my-2" onClick={() => {
                 setNextSerialNumber(prompts.length + 1);
                 setCreateDialogOpen(true)
+                console.log(nextSerialNumber)
             }}>Ajouter un prompt
 
             </Button>
             {
-                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} nextSerialNumber={nextSerialNumber} createPrompt={createPrompt} setPrompts={setPrompts} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
+                createDialogOpen && <CreateDialog categoryId={location.state.categoryId} createPrompt={createPrompt} setPrompts={setPrompts} createDialogOpen={createDialogOpen} setCreateDialogOpen={setCreateDialogOpen}
                 />
             }
 

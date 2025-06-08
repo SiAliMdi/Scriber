@@ -3,11 +3,16 @@ import { useEffect, useState } from "react"
 import { Input } from "./input";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ColumnMetaWithFilter = {
+  filterVariant?: string
+  filterOptions?: { label: string; value: string }[]
+};
+
 const Filter = ({ column }: { column: Column<any, unknown> }) => {
   const columnFilterValue = column.getFilterValue()
-  const { filterVariant } = (column.columnDef.meta as { filterVariant?: string }) ?? {}
+  const { filterVariant, filterOptions: metaFilterOptions } = (column.columnDef.meta as ColumnMetaWithFilter) ?? {}
   const [filterOptions] = useState(() => {
-    return (column.columnDef.meta?.filterOptions ?? []).map(
+    return (metaFilterOptions ?? []).map(
       (option: { label: string; value: string }) => option.value
     )
   })
@@ -44,7 +49,7 @@ const Filter = ({ column }: { column: Column<any, unknown> }) => {
       value={columnFilterValue?.toString()}
     >
       <option value="">Tous</option>
-      {filterOptions.map(value => (
+      {filterOptions.map((value: string) => (
         //dynamically generated select options from faceted values feature
         <option value={value} key={value}>
           {value}

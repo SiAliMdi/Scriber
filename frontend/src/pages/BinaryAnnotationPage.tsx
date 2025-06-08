@@ -13,7 +13,7 @@ import { BinaryAnnotation } from "@/@types/annotations";
 
 const BinaryAnnotationPage: React.FC = () => {
     const [decisions, setDecisions] = useState<Decision[]>([]);
-    const [annotations, setAnnotations] = useState<BinaryAnnotation[]>([]);
+    const [annotations, setAnnotations] = useState<BinaryAnnotation[] | undefined>([]);
     const [selectedDecision, setSelectedDecision] = useState<Decision | null>(null);
     const [checkedDecisions, setCheckedDecisions] = useState<Record<string, boolean>>({});
     const [loading, setLoading] = useState(true);
@@ -55,7 +55,7 @@ const BinaryAnnotationPage: React.FC = () => {
         const currentAnnotation = getUserAnnotation(selectedDecision.id);
         const newAnnotation = currentAnnotation === 1 ? 0 : 1;
 
-        handleAnnotationChange(selectedDecision.id, newAnnotation);
+        handleAnnotationChange(selectedDecision.id || "", newAnnotation);
     };
 
     // Function to handle keypress
@@ -129,12 +129,19 @@ const BinaryAnnotationPage: React.FC = () => {
 
 
     const handleAnnotationChange = (decisionId: string, value: number) => {
-        setAnnotations((prev) => {
+        setAnnotations((prev = []) => {
             const otherAnnotations = prev.filter((ann) => ann.decisionId !== decisionId);
             const existingAnnotation = prev.find((ann) => ann.decisionId === decisionId);
-            return [...otherAnnotations, { ...existingAnnotation, label: value.toString() }];
+            return [
+                ...otherAnnotations,
+                {
+                    ...(existingAnnotation ?? {}),
+                    label: value.toString(),
+                    decisionId: decisionId, // ensure always string
+                } as BinaryAnnotation
+            ];
         });
-        updateBinaryAnnotation(annotations.find((ann) => ann.decisionId === decisionId)?.id ?? ""
+        updateBinaryAnnotation(annotations?.find((ann) => ann.decisionId === decisionId)?.id ?? ""
             , value.toString());
 
         goToNextDecision();
@@ -143,12 +150,12 @@ const BinaryAnnotationPage: React.FC = () => {
 
     const getUserAnnotation = (decisionId: string | undefined): number => {
         if (!decisionId) return 0;
-        return parseInt(annotations.find((ann) => ann.decisionId === decisionId)?.label ?? "0", 10);
+        return parseInt(annotations?.find((ann) => ann.decisionId === decisionId)?.label ?? "0", 10);
     };
 
     const isAnnotated = (decisionId: string | undefined) => {
         if (!decisionId) return false;
-        return annotations.some((ann) => ann.decisionId === decisionId);
+        return annotations?.some((ann) => ann.decisionId === decisionId);
     };
 
     const handleCheckDecision = (decisionId: string | undefined) => {
@@ -160,7 +167,7 @@ const BinaryAnnotationPage: React.FC = () => {
     };
 
     const handleDeleteSelected = () => {
-        const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id] ?? false);
+        const remainingDecisions = decisions.filter((d) => d.id && !checkedDecisions[d.id]);
         setDecisions(remainingDecisions);
         deleteDatasetDecisions(datasetId, Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]));
         setCheckedDecisions({});
@@ -207,7 +214,7 @@ const BinaryAnnotationPage: React.FC = () => {
                                 onClick={() => setSelectedDecision(decision)}
                             >
                                 <Checkbox
-                                    checked={checkedDecisions[decision.id]}
+                                    checked={checkedDecisions[decision?.id || ""] }
                                     onCheckedChange={() => handleCheckDecision(decision.id)}
                                 />
                                 <p className="break-words">

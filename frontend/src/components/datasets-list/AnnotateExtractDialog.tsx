@@ -18,7 +18,7 @@ import { fetchPrompts } from "@/services/PromptsServices";
 interface AnnotateExtractDialogProps {
   categoryId: string;
   datasetId: string;
-  datasetSerialNumber: string;
+  datasetSerialNumber: number | undefined;
 }
 
 const AnnotateExtractDialog = ({ categoryId, datasetId, datasetSerialNumber }: AnnotateExtractDialogProps) => {

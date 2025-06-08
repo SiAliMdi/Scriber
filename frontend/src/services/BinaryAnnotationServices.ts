@@ -1,5 +1,5 @@
 import { BinaryAnnotation } from "@/@types/annotations";
-import { Decision } from "@/@types/decision";
+import { Decision, fetchedDecision } from "@/@types/decision";
 import axios from "axios";
 
 const fetchBinDecisionsWithAnnotations = async (
@@ -20,16 +20,7 @@ const fetchBinDecisionsWithAnnotations = async (
 
     // Extraire les décisions
     const decisions: Decision[] = response.data.raw_decisions.map(
-      (decision: {
-        id?: string;
-        j_texte: string;
-        j_chambre?: string;
-        j_date?: string;
-        j_rg: string;
-        j_ville: string;
-        j_type?: string;
-        j_juridiction?: string;
-      }) => ({
+      (decision: fetchedDecision) => ({
         id: decision.id,
         j_texte: decision.texte_net,
         j_chambre: decision.j_chambre,
@@ -51,6 +42,7 @@ const fetchBinDecisionsWithAnnotations = async (
         label: string,
         updator?: string,
         updated_at?: Date,
+        decision: string;
       }) => ({
         id: annotation.id,
         label: annotation.label,

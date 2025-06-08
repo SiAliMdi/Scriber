@@ -62,7 +62,7 @@ const BinAnnotationValidation: React.FC = () => {
         if (!selectedDecision) return;
         const currentAnnotation = getUserAnnotation(selectedDecision.id);
         const newAnnotation = currentAnnotation === 1 ? 0 : 1;
-        handleAnnotationChange(selectedDecision.id, newAnnotation);
+        handleAnnotationChange(selectedDecision.id || "", newAnnotation);
     };
 
     // Function to handle keypress
@@ -79,20 +79,20 @@ const BinAnnotationValidation: React.FC = () => {
                 break;
             case "ArrowUp":
                 goToPreviousDecision();
-                break;  
+                break;
             case "ArrowDown":
                 goToNextDecision();
                 break;
             case "v":
                 if (selectedDecision) {
-                    handleAnnotationChange(selectedDecision.id!, 
+                    handleAnnotationChange(selectedDecision.id!,
                         getUserAnnotation(selectedDecision.id)
                     );
                 }
                 break;
             case "Enter":
                 if (selectedDecision) {
-                    handleAnnotationChange(selectedDecision.id!, 
+                    handleAnnotationChange(selectedDecision.id!,
                         getUserAnnotation(selectedDecision.id)
                     );
                 }
@@ -150,7 +150,7 @@ const BinAnnotationValidation: React.FC = () => {
         if (decisionId) {
             const annotation = annotations.find((ann) => ann.decisionId === decisionId);
             if (annotation) {
-                updateBinaryAnnotation(annotation.id, annotation.state, annotation.label);
+                updateBinaryAnnotation(annotation.id || "", annotation.state || "", annotation.label);
             }
         }
     }, [annotations])
@@ -162,10 +162,28 @@ const BinAnnotationValidation: React.FC = () => {
             const existingAnnotation = prev.find((ann) => ann.decisionId === decisionId);
             if (!existingAnnotation) {
                 newState = "annotated";
+                // Create a new annotation with all required fields
+                return [
+                    ...otherAnnotations,
+                    {
+                        decisionId: decisionId, // ensure it's a string
+                        label: value.toString(),
+                        state: newState,
+                        // Add other required BinaryAnnotation fields with default values if needed
+                    } as BinaryAnnotation
+                ];
             } else {
                 newState = existingAnnotation.label === value.toString() ? "validated" : "corrected";
+                return [
+                    ...otherAnnotations,
+                    {
+                        ...existingAnnotation,
+                        label: value.toString(),
+                        state: newState,
+                        decisionId: decisionId // ensure it's a string
+                    }
+                ];
             }
-            return [...otherAnnotations, { ...existingAnnotation, label: value.toString(), state: newState }];
         });
         const count = annotations.filter((ann) => ann.state === "validated" || ann.state === "corrected").length;
         setValidatedCount(count);
@@ -192,7 +210,7 @@ const BinAnnotationValidation: React.FC = () => {
     };
 
     const handleDeleteSelected = () => {
-        const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id] ?? false);
+        const remainingDecisions = decisions.filter((d) => !checkedDecisions[d.id || ""] || false);
         setDecisions(remainingDecisions);
         deleteDatasetDecisions(datasetId, Object.keys(checkedDecisions).filter((key) => checkedDecisions[key]));
         setCheckedDecisions({});
@@ -215,7 +233,10 @@ const BinAnnotationValidation: React.FC = () => {
     };
 
     if (loading) return <p className="text-center mt-10"> <strong>Chargement des décisions...</strong> </p>;
-    if (error) return <p className="text-red-500 text-center mt-10">{error}</p>;
+    if (error) {
+        setError("Une erreur s'est produite lors du chargement des décisions.");
+        return <p className="text-red-500 text-center mt-10">{error}</p>
+    }
 
     return (
         <div className="h-screen w-screen flex flex-col">
@@ -227,13 +248,13 @@ const BinAnnotationValidation: React.FC = () => {
                 <div className="w-[15vw] max-w-[15vw] border-r border-gray-300 flex flex-col">
                     <div className="flex items-center max-h-10 justify-evenly p-1 border-b bg-white">
                         <span>
-                          <strong>1: </strong>{decisions.filter((d) => getUserAnnotation(d.id) === 1).length}
+                            <strong>1: </strong>{decisions.filter((d) => getUserAnnotation(d.id) === 1).length}
                         </span>
                         <span>
                             <strong>0:</strong> {decisions.filter((d) => getUserAnnotation(d.id) === 0).length}
                         </span>
                         <span>
-                         <strong>T:</strong> {validatedCount} 
+                            <strong>T:</strong> {validatedCount}
                         </span>
                         <strong>
                             {selectedIndex}/{totalDecisions}
@@ -249,7 +270,7 @@ const BinAnnotationValidation: React.FC = () => {
                                 key={decision.id}
                                 className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer mb-2 text-sm 
                                 ${selectedDecision?.id === decision.id ? "bg-blue-300" : getAnnotationStateColor(
-                                    isAnnotated(decision.id) ? annotations.find((ann) => ann.decisionId === decision.id)?.state : "annotated"
+                                    isAnnotated(decision.id) ? (annotations.find((ann) => ann.decisionId === decision.id)?.state ?? "annotated") : "annotated"
                                 )} 
                                 hover:bg-gray-100`}
                                 ref={(el) => (decisionRefs.current[idx] = el)}
@@ -258,7 +279,7 @@ const BinAnnotationValidation: React.FC = () => {
                                 }}
                             >
                                 <Checkbox
-                                    checked={checkedDecisions[decision.id]}
+                                    checked={decision.id ? checkedDecisions[decision.id] : false}
                                     onCheckedChange={() => handleCheckDecision(decision.id)}
                                 />
                                 <p className="break-words">

@@ -1,4 +1,4 @@
-import AiModel, { AiModelType }  from "@/@types/ai-model";
+import AiModel, { AiModelType, fetchedAiModel }  from "@/@types/ai-model";
 import axios from "axios";
 import { Training } from "@/@types/ai-model";
 
@@ -17,7 +17,7 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
     )
     .then((response) => {
       const aimodels: AiModel[] = response.data.map(
-        (model: AiModel) => {
+        (model: fetchedAiModel) => {
             return {
                 id: model.id,
                 name: model.name,
@@ -42,7 +42,7 @@ const fetchAiModels = async (categoryId: string, setAiModels: React.Dispatch<Rea
     });
 }
 
-const fetchAiModel = async (id: number): Promise<AiModel | undefined> => {
+const fetchAiModel = async (id: string): Promise<AiModel | undefined> => {
   try {
     const token = sessionStorage.getItem("token");
     const response = await axios.get(
@@ -52,7 +52,7 @@ const fetchAiModel = async (id: number): Promise<AiModel | undefined> => {
         withCredentials: true
       }
     );
-    const model = response.data as AiModel;
+    const model:fetchedAiModel = response.data;
     return {
       id: model.id,
       name: model.name,
