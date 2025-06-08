@@ -194,6 +194,12 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
     } else {
       // Decisions only
       data = await fetchTextDecisionsWithAnnotationsDirect(datasetId);
+      // remove annotations from decisions
+      data = data.map((decision) => {
+        const { annotations, ...rest } = decision;
+        return rest;
+      }
+      );
       fileName += `decisions_`;
     }
 
