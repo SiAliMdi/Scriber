@@ -21,6 +21,7 @@ import { Dataset } from '@/@types/dataset';
 import { useEffect, useState } from 'react';
 import { User } from '@/@types/user';
 import { getUser } from '@/utils/User';
+import AgreementDialog from './AgreementDialog';
 
 interface DataTableRowActionsProps {
   row: Row<Dataset>;
@@ -31,12 +32,12 @@ interface DataTableRowActionsProps {
 
 
 
-const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowActionsProps) => {
+const DataTableRowActions = ({ row, setDatasets, onDelete }: DataTableRowActionsProps) => {
   // const navigate = useNavigate();
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>();
-  
+
   useEffect(() => {
     getUser().then((response) => {
       setUser(response);
@@ -58,7 +59,7 @@ const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowAction
           <DropdownMenuItem className="hover:cursor-pointer" asChild>
           </DropdownMenuItem>
           <ReadDialog {...{ row }} />
-          <EditDialog {...{ row,  setDatasets}} />
+          <EditDialog {...{ row, setDatasets }} />
           <DropdownMenuItem className="hover:cursor-pointer" onClick={() => onDelete(row.original)}>Supprimer</DropdownMenuItem>
           <DropdownMenuSeparator />
           <LabelsDialog {...{ row }} />
@@ -74,19 +75,27 @@ const DataTableRowActions = ({ row, setDatasets,  onDelete }: DataTableRowAction
             datasetSerialNumber={row.original.serialNumber}
           />
 
-          { user?.isSuperUser &&
-          (<ValidationDialog
-            datasetId={row.original.id || ''}
-            datasetSerialNumber={row.original.serialNumber}
-          // categoryId={location.state.categoryId}
-          />)}
+          {user?.isSuperUser &&
+            (<ValidationDialog
+              datasetId={row.original.id || ''}
+              datasetSerialNumber={row.original.serialNumber}
+            // categoryId={location.state.categoryId}
+            />)}
 
-          { user?.isSuperUser &&
-          (<ExtValidationDialog
-            datasetId={row.original.id || ''}
-            datasetSerialNumber={row.original.serialNumber}
-          // categoryId={location.state.categoryId}
-          />)}
+          {user?.isSuperUser &&
+            (<ExtValidationDialog
+              datasetId={row.original.id || ''}
+              datasetSerialNumber={row.original.serialNumber}
+            // categoryId={location.state.categoryId}
+            />)}
+
+
+          <DropdownMenuItem className="hover:cursor-pointer" asChild>
+            <AgreementDialog
+              datasetId={row.original.id || ''}
+              datasetName={row.original.name || row.original.serialNumber?.toString() || ''}
+            />
+          </DropdownMenuItem>
 
           <DownloadDatasetDialog
             datasetId={row.original.id || ''}
