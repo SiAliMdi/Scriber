@@ -15,6 +15,7 @@ import ExtractiveAnnotationValidation from './pages/ExtractiveAnnotationValidati
 import ExtractiveAnnotationPage from './pages/ExtractiveAnnotationPage'
 import DatasetsPage from './pages/DatasetsPage'
 import LLMAnnotationValidation from './pages/LLMAnnotationValidation'
+import TermsAndPolicyPage from './pages/TermsAndPolicyPage'
 /* import { lazy, Suspense } from 'react';
 const ExtractiveAnnotationPage = lazy(() => import('./pages/ExtractiveAnnotationPage'));
 const LLMAnnotationValidation = lazy(() => import('./pages/LLMAnnotationValidation'));
@@ -55,6 +56,8 @@ const  App: React.FC = () => {
                 
                     <Route path="/login" element={<LoginPage/>}/>
                     <Route path='/register' element={<RegisterPage/>}/>
+                    <Route path="/terms-and-policy" element={<TermsAndPolicyPage />} />
+
                     <Route path='/categories' element={ <CategoriesPage/> }/>
                     <Route path='/datasets/:id'  element={ <DatasetsPage/> }/>
                     <Route path='/models/:id' element={ <ModelsPage/> }/>
