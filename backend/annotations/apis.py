@@ -328,90 +328,6 @@ class ExtractionAnnotationUpdateView(views.APIView):
             return response.Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-class BinaryAnnotationAgreementView(APIView):
-    """
-    API to calculate inter-agreement for binary annotations.
-    """
-    def get(self, request, dataset_id):
-        user1_id = request.query_params.get("user1")
-        user2_id = request.query_params.get("user2")
-        model_id = request.query_params.get("model")
-
-        # Fetch binary annotations for the dataset
-        annotations = BinaryAnnotationsModel.objects.filter(
-            decision__dataset_id=dataset_id,
-            deleted=False
-        ).select_related("decision", "label", "creator", "model_annotator")
-
-        # Filter annotations by users or models
-        user1_annotations = annotations.filter(creator_id=user1_id) if user1_id else None
-        user2_annotations = annotations.filter(creator_id=user2_id) if user2_id else None
-        model_annotations = annotations.filter(model_annotator_id=model_id) if model_id else None
-
-        # Prepare data for comparison
-        decision_ids = set(annotations.values_list("decision_id", flat=True))
-        user1_labels = {a.decision_id: a.label.label for a in user1_annotations} if user1_annotations else {}
-        user2_labels = {a.decision_id: a.label.label for a in user2_annotations} if user2_annotations else {}
-        model_labels = {a.decision_id: a.label.label for a in model_annotations} if model_annotations else {}
-
-        # Calculate agreement
-        results = {}
-        if user1_annotations and user2_annotations:
-            user1 = [user1_labels.get(d, None) for d in decision_ids]
-            user2 = [user2_labels.get(d, None) for d in decision_ids]
-            results["user1_vs_user2"] = cohen_kappa_score(user1, user2)
-
-        if user1_annotations and model_annotations:
-            user1 = [user1_labels.get(d, None) for d in decision_ids]
-            model = [model_labels.get(d, None) for d in decision_ids]
-            results["user1_vs_model"] = cohen_kappa_score(user1, model)
-
-        if user2_annotations and model_annotations:
-            user2 = [user2_labels.get(d, None) for d in decision_ids]
-            model = [model_labels.get(d, None) for d in decision_ids]
-            results["user2_vs_model"] = cohen_kappa_score(user2, model)
-
-        return response.Response(results, status=200)
-
-
-class ExtractiveAnnotationAgreementView(APIView):
-    """
-    API to calculate inter-agreement for extractive annotations.
-    """
-    def get(self, request, dataset_id):
-        user1_id = request.query_params.get("user1")
-        user2_id = request.query_params.get("user2")
-        model_id = request.query_params.get("model")
-
-        # Fetch extractive annotations for the dataset
-        annotations = TextAnnotationsModel.objects.filter(
-            decision__dataset_id=dataset_id,
-            deleted=False
-        ).select_related("decision", "label", "creator")
-
-        # Filter annotations by users or models
-        user1_annotations = annotations.filter(creator_id=user1_id) if user1_id else None
-        user2_annotations = annotations.filter(creator_id=user2_id) if user2_id else None
-
-        # Prepare data for comparison
-        decision_ids = set(annotations.values_list("decision_id", flat=True))
-        user1_spans = {a.decision_id: (a.start_offset, a.end_offset) for a in user1_annotations} if user1_annotations else {}
-        user2_spans = {a.decision_id: (a.start_offset, a.end_offset) for a in user2_annotations} if user2_annotations else {}
-
-        # Calculate Jaccard Index for each decision
-        jaccard_scores = []
-        for decision_id in decision_ids:
-            user1_span = user1_spans.get(decision_id, None)
-            user2_span = user2_spans.get(decision_id, None)
-            if user1_span and user2_span:
-                overlap = max(0, min(user1_span[1], user2_span[1]) - max(user1_span[0], user2_span[0]))
-                union = max(user1_span[1], user2_span[1]) - min(user1_span[0], user2_span[0])
-                jaccard_scores.append(overlap / union if union > 0 else 0)
-
-        # Return average Jaccard Index
-        avg_jaccard = sum(jaccard_scores) / len(jaccard_scores) if jaccard_scores else 0
-        return response.Response({"jaccard_index": avg_jaccard}, status=200)
-
 from itertools import combinations
 import numpy as np
 from sklearn.metrics import cohen_kappa_score
@@ -432,9 +348,8 @@ class MultiAnnotatorBinaryAgreementView(APIView):
             decision__dataset_id=dataset_id,
             deleted=False
         ).select_related("decision", "label", "creator", "trained_model_annotator")
-
         # Get all decision IDs
-        decision_ids = list(annotations.values_list("decision_id", flat=True).distinct())
+        decision_ids = list(set(annotations.values_list("decision_id", flat=True).distinct()))
         
         results = {}
         
@@ -455,13 +370,12 @@ class MultiAnnotatorBinaryAgreementView(APIView):
     def _calculate_human_agreement(self, annotations, decision_ids):
         """Calculate agreement between human annotators."""
         # Get all human annotators
-        human_annotators = annotations.filter(
+        human_annotators = list(set(annotations.filter(
             creator__isnull=False
-        ).values_list("creator_id", flat=True).distinct()
+        ).values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
         
         if len(human_annotators) < 2:
-            return {"error": "Need at least 2 human annotators"}
-        
+            return {"error": "Besoin de 2 annotateurs humains au moins"}
         # Create annotation matrix: decisions x annotators
         annotation_matrix = self._create_annotation_matrix(
             annotations.filter(creator_id__in=human_annotators),
@@ -475,12 +389,12 @@ class MultiAnnotatorBinaryAgreementView(APIView):
     def _calculate_model_agreement(self, annotations, decision_ids):
         """Calculate agreement between model annotators."""
         # Get all model annotators
-        model_annotators = annotations.filter(
+        model_annotators = list(set(annotations.filter(
             trained_model_annotator__isnull=False
-        ).values_list("trained_model_annotator_id", flat=True).distinct()
+        ).values_list("trained_model_annotator_id", flat=True).distinct()))
         
         if len(model_annotators) < 2:
-            return {"error": "Need at least 2 model annotators"}
+            return {"error": "Besoin de 2 modèles annotateurs au moins"}
         
         # Create annotation matrix
         annotation_matrix = self._create_annotation_matrix(
@@ -494,16 +408,16 @@ class MultiAnnotatorBinaryAgreementView(APIView):
 
     def _calculate_human_vs_model_agreement(self, annotations, decision_ids):
         """Calculate agreement between human and model annotators."""
-        human_annotators = list(annotations.filter(
+        human_annotators = list(set(annotations.filter(
             creator__isnull=False
-        ).values_list("creator_id", flat=True).distinct())
+        ).values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
         
-        model_annotators = list(annotations.filter(
+        model_annotators = list(set(annotations.filter(
             trained_model_annotator__isnull=False
-        ).values_list("trained_model_annotator_id", flat=True).distinct())
+        ).values_list("trained_model_annotator_id", flat=True).distinct()))
         
         if not human_annotators or not model_annotators:
-            return {"error": "Need both human and model annotators"}
+            return {"error": "Besoin des annotateurs humains et modèles"}
         
         # Combine human and model annotations
         all_annotators = [(f"human_{h}", h, "creator_id") for h in human_annotators] + \
@@ -592,7 +506,7 @@ class MultiAnnotatorBinaryAgreementView(APIView):
         
         # 4. Agreement percentage
         results["agreement_percentage"] = self._calculate_agreement_percentage(annotation_matrix, annotators)
-        
+        print("Bin Agreement Percentage:", results["agreement_percentage"])
         return results
 
     def _calculate_fleiss_kappa(self, annotation_matrix, annotators):
@@ -732,45 +646,34 @@ class MultiAnnotatorExtractiveAgreementView(APIView):
             decision__dataset_id=dataset_id,
             deleted=False
         ).select_related("decision", "label", "creator")
-        
         # Fetch model extractive annotations (ExtractionAnnotationsModel)
         model_annotations = ExtractionAnnotationsModel.objects.filter(
             decision__dataset_id=dataset_id,
             deleted=False
         ).select_related("decision", "creator")
-        
         # Get all decision IDs from both annotation types
         human_decision_ids = set(human_annotations.values_list("decision_id", flat=True))
         model_decision_ids = set(model_annotations.values_list("decision_id", flat=True))
         all_decision_ids = list(human_decision_ids.union(model_decision_ids))
-        
         results = {}
         
-        # if agreement_type in ["all", "human"]:
         results["human_annotators"] = self._calculate_human_extractive_agreement(human_annotations, all_decision_ids)
-        
-        # if agreement_type in ["all", "model"]:
         results["model_annotators"] = self._calculate_model_extractive_agreement(model_annotations, all_decision_ids)
-        
-        # if agreement_type in ["all", "human_vs_model"]:
         results["human_vs_model"] = self._calculate_human_vs_model_extractive_agreement(
                 human_annotations, model_annotations, all_decision_ids
             )
-        
-        # if agreement_type == "all":
         results["overall"] = self._calculate_overall_extractive_agreement(
                 human_annotations, model_annotations, all_decision_ids
             )
-        
         return response.Response(results, status=200)
 
     def _calculate_human_extractive_agreement(self, human_annotations, decision_ids):
         """Calculate agreement between human annotators using TextAnnotationsModel."""
         # Get all human annotators
-        annotators = list(human_annotations.values_list("creator_id", flat=True).distinct())
+        annotators = list(set(human_annotations.values_list("creator_id", flat=True).distinct()))
         
         if len(annotators) < 2:
-            return {"error": "Need at least 2 human annotators"}
+            return {"error": "Besoin de 2 annotateurs humains au moins"}
         
         # Create span matrix for human annotations
         span_matrix = {}
@@ -793,7 +696,7 @@ class MultiAnnotatorExtractiveAgreementView(APIView):
                     model_annotators.append(model_id)
         
         if len(model_annotators) < 2:
-            return {"error": "Need at least 2 model annotators"}
+            return {"error": "Besoin de 2 modèles annotateurs au moins"}
         
         # Create span matrix for model annotations
         span_matrix = {}
@@ -809,18 +712,16 @@ class MultiAnnotatorExtractiveAgreementView(APIView):
                     # Extract spans from llm_json_result
                     spans = self._extract_spans_from_llm_result(annotation.llm_json_result)
                     if spans:
-                        # For multiple spans, we'll use the first one or combine them
-                        # You might want to modify this logic based on your needs
                         model_spans[annotation.decision_id] = spans[0] if spans else None
         
-        span_matrix[model_id] = [model_spans.get(decision_id, None) for decision_id in decision_ids]
+            span_matrix[model_id] = [model_spans.get(decision_id, None) for decision_id in decision_ids]
     
         return self._calculate_extractive_agreement_metrics(span_matrix, model_annotators, "model")
 
     def _calculate_human_vs_model_extractive_agreement(self, human_annotations, model_annotations, decision_ids):
         """Calculate agreement between human and model annotators."""
         # Get human annotators
-        human_annotators = list(human_annotations.values_list("creator_id", flat=True).distinct())
+        human_annotators = list(set(human_annotations.values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
         
         # Get model annotators
         model_annotators = []
@@ -831,7 +732,7 @@ class MultiAnnotatorExtractiveAgreementView(APIView):
                     model_annotators.append(model_id)
         
         if not human_annotators or not model_annotators:
-            return {"error": "Need both human and model annotators"}
+            return {"error": "Besoin des annotateurs humains et modèles"}
         
         # Create combined span matrix
         span_matrix = {}
@@ -940,7 +841,6 @@ class MultiAnnotatorExtractiveAgreementView(APIView):
             "num_decisions": len(next(iter(span_matrix.values()))) if span_matrix else 0,
             "annotators": annotators
         }
-        
         if len(annotators) < 2:
             return results
         
