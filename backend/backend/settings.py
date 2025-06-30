@@ -18,7 +18,11 @@ DEBUG = getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', 'localhost').split(',')
 if not DEBUG:
+<<<<<<< HEAD
     SECURE_PROXY_SSL_HEADER = tuple(getenv('SECURE_PROXY_SSL_HEADER', '').split(','))
+=======
+    SECURE_PROXY_SSL_HEADER = (a for a in getenv('SECURE_PROXY_SSL_HEADER', '').split(',') if a)
+>>>>>>> 14f18d8a6450d77f431c8cd84f33b3f1ee0c4ee9
     SECURE_SSL_REDIRECT = getenv('SECURE_SSL_REDIRECT') == 'True'
     CSRF_COOKIE_SECURE= getenv('CSRF_COOKIE_SECURE',) == 'True'
     SESSION_COOKIE_SECURE= getenv('SESSION_COOKIE_SECURE',) == 'True'

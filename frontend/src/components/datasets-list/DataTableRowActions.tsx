@@ -21,7 +21,10 @@ import { Dataset } from '@/@types/dataset';
 import { useEffect, useState } from 'react';
 import { User } from '@/@types/user';
 import { getUser } from '@/utils/User';
+<<<<<<< HEAD
 import AgreementDialog from './AgreementDialog';
+=======
+>>>>>>> 14f18d8a6450d77f431c8cd84f33b3f1ee0c4ee9
 
 interface DataTableRowActionsProps {
   row: Row<Dataset>;
@@ -37,7 +40,11 @@ const DataTableRowActions = ({ row, setDatasets, onDelete }: DataTableRowActions
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>();
+<<<<<<< HEAD
 
+=======
+  
+>>>>>>> 14f18d8a6450d77f431c8cd84f33b3f1ee0c4ee9
   useEffect(() => {
     getUser().then((response) => {
       setUser(response);
