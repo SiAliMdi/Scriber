@@ -223,7 +223,7 @@ const DownloadDatasetDialog = ({ datasetId, datasetName }: DownloadDatasetDialog
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <span className="hover:cursor-pointer">Télécharger le dataset</span>
+        <span className="hover:cursor-pointer block">Télécharger le dataset</span>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>

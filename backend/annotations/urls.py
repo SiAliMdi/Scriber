@@ -4,6 +4,8 @@ from . import apis
 app_name = "annotations"
 
 urlpatterns = [
+    path("binary/agreement/<str:dataset_id>/", apis.MultiAnnotatorBinaryAgreementView.as_view(), name="binary_annotation_agreement"),
+    path("extractive/agreement/<str:dataset_id>/", apis.MultiAnnotatorExtractiveAgreementView.as_view(), name="extractive_annotation_agreement"),
     path(
         "extractive/llm_annotations/<str:dataset_id>/",
         apis.ExtractionAnnotationsByModelView.as_view(),

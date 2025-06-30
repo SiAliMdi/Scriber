@@ -12,8 +12,13 @@ from ai_models.models import Ai_ModelsModel, AiModelTrainingsModel
 from users import services
 from ai_models.serializers import AiModelSerializer, AiModelTrainingSerializer
 from users.serializers import UserSerializer
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+# from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.views import APIView
+from sklearn.metrics import cohen_kappa_score
+from sklearn.metrics import jaccard_score
+
+
+
 
 
 class BinDatasetRawDecisionsView(views.APIView):
@@ -321,3 +326,625 @@ class ExtractionAnnotationUpdateView(views.APIView):
             return response.Response({"error": "Extraction not found"}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return response.Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+from itertools import combinations
+import numpy as np
+from sklearn.metrics import cohen_kappa_score
+import krippendorff
+
+class MultiAnnotatorBinaryAgreementView(APIView):
+    """
+    API to calculate inter-agreement for binary annotations between multiple annotators.
+    """
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        # agreement_type = request.query_params.get("type", "all")  # all, human, model, human_vs_model
+        
+        # Fetch binary annotations for the dataset
+        annotations = BinaryAnnotationsModel.objects.filter(
+            decision__dataset_id=dataset_id,
+            deleted=False
+        ).select_related("decision", "label", "creator", "trained_model_annotator")
+        # Get all decision IDs
+        decision_ids = list(set(annotations.values_list("decision_id", flat=True).distinct()))
+        
+        results = {}
+        
+        # if agreement_type in ["all", "human"]:
+        results["human_annotators"] = self._calculate_human_agreement(annotations, decision_ids)
+        
+        # if agreement_type in ["all", "model"]:
+        results["model_annotators"] = self._calculate_model_agreement(annotations, decision_ids)
+        
+        # if agreement_type in ["all", "human_vs_model"]:
+        results["human_vs_model"] = self._calculate_human_vs_model_agreement(annotations, decision_ids)
+        
+        # if agreement_type == "all":
+        results["overall"] = self._calculate_overall_agreement(annotations, decision_ids)
+        
+        return response.Response(results, status=200)
+
+    def _calculate_human_agreement(self, annotations, decision_ids):
+        """Calculate agreement between human annotators."""
+        # Get all human annotators
+        human_annotators = list(set(annotations.filter(
+            creator__isnull=False
+        ).values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
+        
+        if len(human_annotators) < 2:
+            return {"error": "Besoin de 2 annotateurs humains au moins"}
+        # Create annotation matrix: decisions x annotators
+        annotation_matrix = self._create_annotation_matrix(
+            annotations.filter(creator_id__in=human_annotators),
+            decision_ids,
+            list(human_annotators),
+            "creator_id"
+        )
+        
+        return self._calculate_agreement_metrics(annotation_matrix, list(human_annotators))
+
+    def _calculate_model_agreement(self, annotations, decision_ids):
+        """Calculate agreement between model annotators."""
+        # Get all model annotators
+        model_annotators = list(set(annotations.filter(
+            trained_model_annotator__isnull=False
+        ).values_list("trained_model_annotator_id", flat=True).distinct()))
+        
+        if len(model_annotators) < 2:
+            return {"error": "Besoin de 2 modèles annotateurs au moins"}
+        
+        # Create annotation matrix
+        annotation_matrix = self._create_annotation_matrix(
+            annotations.filter(trained_model_annotator_id__in=model_annotators),
+            decision_ids,
+            list(model_annotators),
+            "trained_model_annotator_id"
+        )
+        
+        return self._calculate_agreement_metrics(annotation_matrix, list(model_annotators))
+
+    def _calculate_human_vs_model_agreement(self, annotations, decision_ids):
+        """Calculate agreement between human and model annotators."""
+        human_annotators = list(set(annotations.filter(
+            creator__isnull=False
+        ).values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
+        
+        model_annotators = list(set(annotations.filter(
+            trained_model_annotator__isnull=False
+        ).values_list("trained_model_annotator_id", flat=True).distinct()))
+        
+        if not human_annotators or not model_annotators:
+            return {"error": "Besoin des annotateurs humains et modèles"}
+        
+        # Combine human and model annotations
+        all_annotators = [(f"human_{h}", h, "creator_id") for h in human_annotators] + \
+                        [(f"model_{m}", m, "trained_model_annotator_id") for m in model_annotators]
+        
+        # Create combined annotation matrix
+        annotation_matrix = {}
+        
+        for annotator_label, annotator_id, field in all_annotators:
+            if field == "creator_id":
+                annotator_annotations = annotations.filter(creator_id=annotator_id)
+            else:
+                annotator_annotations = annotations.filter(trained_model_annotator_id=annotator_id)
+            
+            annotation_dict = {a.decision_id: a.label.label for a in annotator_annotations}
+            annotation_matrix[annotator_label] = [
+                annotation_dict.get(decision_id, None) for decision_id in decision_ids
+            ]
+        
+        return self._calculate_agreement_metrics(annotation_matrix, list(annotation_matrix.keys()))
+
+    def _calculate_overall_agreement(self, annotations, decision_ids):
+        """Calculate overall agreement between all annotators (human + model)."""
+        return self._calculate_human_vs_model_agreement(annotations, decision_ids)
+
+    def _create_annotation_matrix(self, annotations, decision_ids, annotators, field):
+        """Create annotation matrix for given annotators."""
+        annotation_matrix = {}
+        
+        for annotator in annotators:
+            filter_dict = {field: annotator}
+            annotator_annotations = annotations.filter(**filter_dict)
+            annotation_dict = {a.decision_id: a.label.label for a in annotator_annotations}
+            annotation_matrix[annotator] = [
+                annotation_dict.get(decision_id, None) for decision_id in decision_ids
+            ]
+        
+        return annotation_matrix
+
+    def _calculate_agreement_metrics(self, annotation_matrix, annotators):
+        """Calculate various agreement metrics."""
+        results = {
+            "num_annotators": len(annotators),
+            "num_decisions": len(next(iter(annotation_matrix.values()))),
+            "annotators": annotators
+        }
+        
+        # 1. Average Pairwise Cohen's Kappa
+        if len(annotators) >= 2:
+            kappa_scores = []
+            pairwise_results = {}
+            
+            for ann1, ann2 in combinations(annotators, 2):
+                labels1 = annotation_matrix[ann1]
+                labels2 = annotation_matrix[ann2]
+                
+                # Filter out None values (missing annotations)
+                paired_labels = [(l1, l2) for l1, l2 in zip(labels1, labels2) if l1 is not None and l2 is not None]
+                
+                if len(paired_labels) > 0:
+                    filtered_labels1, filtered_labels2 = zip(*paired_labels)
+                    kappa = cohen_kappa_score(filtered_labels1, filtered_labels2)
+                    kappa_scores.append(kappa)
+                    pairwise_results[f"{ann1}_vs_{ann2}"] = {
+                        "cohen_kappa": kappa,
+                        "num_common_annotations": len(paired_labels)
+                    }
+            
+            results["average_pairwise_kappa"] = np.mean(kappa_scores) if kappa_scores else 0
+            results["pairwise_details"] = pairwise_results
+        
+        # 2. Fleiss' Kappa (if we have multiple annotators)
+        if len(annotators) >= 3:
+            try:
+                fleiss_kappa = self._calculate_fleiss_kappa(annotation_matrix, annotators)
+                results["fleiss_kappa"] = fleiss_kappa
+            except Exception as e:
+                results["fleiss_kappa_error"] = str(e)
+        
+        # 3. Krippendorff's Alpha (if available)
+        try:
+            alpha = self._calculate_krippendorff_alpha(annotation_matrix, annotators)
+            results["krippendorff_alpha"] = alpha
+        except Exception as e:
+            results["krippendorff_alpha_error"] = str(e)
+        
+        # 4. Agreement percentage
+        results["agreement_percentage"] = self._calculate_agreement_percentage(annotation_matrix, annotators)
+        print("Bin Agreement Percentage:", results["agreement_percentage"])
+        return results
+
+    def _calculate_fleiss_kappa(self, annotation_matrix, annotators):
+        """Calculate Fleiss' Kappa for multiple annotators."""
+        from sklearn.metrics import cohen_kappa_score
+        import pandas as pd
+        
+        # Convert to DataFrame for easier manipulation
+        df = pd.DataFrame(annotation_matrix)
+        
+        # Get unique labels
+        all_labels = set()
+        for labels in annotation_matrix.values():
+            all_labels.update([l for l in labels if l is not None])
+        all_labels = list(all_labels)
+        
+        # Create agreement matrix for Fleiss' Kappa
+        n_items = len(next(iter(annotation_matrix.values())))
+        n_categories = len(all_labels)
+        n_raters = len(annotators)
+        
+        # This is a simplified implementation - you might want to use a proper library
+        # like `fleiss_kappa` from `statsmodels` if available
+        
+        agreement_counts = []
+        for i in range(n_items):
+            item_counts = {label: 0 for label in all_labels}
+            valid_ratings = 0
+            
+            for annotator in annotators:
+                label = annotation_matrix[annotator][i]
+                if label is not None:
+                    item_counts[label] += 1
+                    valid_ratings += 1
+            
+            if valid_ratings >= 2:  # Need at least 2 ratings
+                agreement_counts.append(list(item_counts.values()))
+        
+        # Calculate Fleiss' Kappa (simplified)
+        if len(agreement_counts) == 0:
+            return 0
+        
+        # This is a basic implementation - consider using a proper statistical library
+        return self._fleiss_kappa_calculation(agreement_counts, n_raters)
+
+    def _fleiss_kappa_calculation(self, agreement_counts, n_raters):
+        """Basic Fleiss' Kappa calculation."""
+        # This is a simplified version - use a proper statistical library for production
+        import numpy as np
+        
+        agreement_counts = np.array(agreement_counts)
+        n_items, n_categories = agreement_counts.shape
+        
+        # Calculate observed agreement
+        p_observed = 0
+        for i in range(n_items):
+            item_sum = np.sum(agreement_counts[i])
+            if item_sum >= 2:
+                p_observed += np.sum(agreement_counts[i] * (agreement_counts[i] - 1)) / (item_sum * (item_sum - 1))
+        
+        p_observed /= n_items
+        
+        # Calculate expected agreement
+        category_totals = np.sum(agreement_counts, axis=0)
+        total_ratings = np.sum(category_totals)
+        p_expected = np.sum((category_totals / total_ratings) ** 2)
+        
+        # Calculate Fleiss' Kappa
+        if p_expected == 1:
+            return 1 if p_observed == 1 else 0
+        
+        return (p_observed - p_expected) / (1 - p_expected)
+
+    def _calculate_krippendorff_alpha(self, annotation_matrix, annotators):
+        """Calculate Krippendorff's Alpha."""
+        try:
+            # Convert to format expected by krippendorff library
+            # You'll need to install: pip install krippendorff
+            
+            # Create reliability data matrix
+            reliability_data = []
+            for annotator in annotators:
+                reliability_data.append(annotation_matrix[annotator])
+            
+            # Convert string labels to numeric
+            all_labels = set()
+            for labels in annotation_matrix.values():
+                all_labels.update([l for l in labels if l is not None])
+            
+            label_to_num = {label: i for i, label in enumerate(sorted(all_labels))}
+            
+            numeric_data = []
+            for row in reliability_data:
+                numeric_row = [label_to_num[label] if label is not None else np.nan for label in row]
+                numeric_data.append(numeric_row)
+            
+            alpha = krippendorff.alpha(reliability_data=np.array(numeric_data), level_of_measurement='nominal')
+            return alpha
+        except ImportError:
+            raise Exception("krippendorff library not installed. Install with: pip install krippendorff")
+
+    def _calculate_agreement_percentage(self, annotation_matrix, annotators):
+        """Calculate simple agreement percentage."""
+        if len(annotators) < 2:
+            return 0
+        
+        total_items = 0
+        agreed_items = 0
+        
+        n_decisions = len(next(iter(annotation_matrix.values())))
+        
+        for i in range(n_decisions):
+            # Get all non-None labels for this decision
+            labels = [annotation_matrix[annotator][i] for annotator in annotators 
+                     if annotation_matrix[annotator][i] is not None]
+            
+            if len(labels) >= 2:  # Need at least 2 annotations to compare
+                total_items += 1
+                if len(set(labels)) == 1:  # All labels are the same
+                    agreed_items += 1
+        
+        return (agreed_items / total_items * 100) if total_items > 0 else 0
+    
+    
+class MultiAnnotatorExtractiveAgreementView(APIView):
+    """
+    API to calculate inter-agreement for extractive annotations between multiple annotators.
+    """
+    authentication_classes = (services.ScriberUserAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get(self, request, dataset_id):
+        # agreement_type = request.query_params.get("type", "all")  # all, human, model, human_vs_model
+        
+        # Fetch human extractive annotations (TextAnnotationsModel)
+        human_annotations = TextAnnotationsModel.objects.filter(
+            decision__dataset_id=dataset_id,
+            deleted=False
+        ).select_related("decision", "label", "creator")
+        # Fetch model extractive annotations (ExtractionAnnotationsModel)
+        model_annotations = ExtractionAnnotationsModel.objects.filter(
+            decision__dataset_id=dataset_id,
+            deleted=False
+        ).select_related("decision", "creator")
+        # Get all decision IDs from both annotation types
+        human_decision_ids = set(human_annotations.values_list("decision_id", flat=True))
+        model_decision_ids = set(model_annotations.values_list("decision_id", flat=True))
+        all_decision_ids = list(human_decision_ids.union(model_decision_ids))
+        results = {}
+        
+        results["human_annotators"] = self._calculate_human_extractive_agreement(human_annotations, all_decision_ids)
+        results["model_annotators"] = self._calculate_model_extractive_agreement(model_annotations, all_decision_ids)
+        results["human_vs_model"] = self._calculate_human_vs_model_extractive_agreement(
+                human_annotations, model_annotations, all_decision_ids
+            )
+        results["overall"] = self._calculate_overall_extractive_agreement(
+                human_annotations, model_annotations, all_decision_ids
+            )
+        return response.Response(results, status=200)
+
+    def _calculate_human_extractive_agreement(self, human_annotations, decision_ids):
+        """Calculate agreement between human annotators using TextAnnotationsModel."""
+        # Get all human annotators
+        annotators = list(set(human_annotations.values_list("creator_id", flat=True).distinct()))
+        
+        if len(annotators) < 2:
+            return {"error": "Besoin de 2 annotateurs humains au moins"}
+        
+        # Create span matrix for human annotations
+        span_matrix = {}
+        for annotator in annotators:
+            annotator_annotations = human_annotations.filter(creator_id=annotator)
+            span_dict = {a.decision_id: (a.start_offset, a.end_offset) for a in annotator_annotations}
+            span_matrix[annotator] = [span_dict.get(decision_id, None) for decision_id in decision_ids]
+        
+        return self._calculate_extractive_agreement_metrics(span_matrix, annotators, "human")
+
+    def _calculate_model_extractive_agreement(self, model_annotations, decision_ids):
+        """Calculate agreement between model annotators using ExtractionAnnotationsModel."""
+        # Get all unique model annotators (model_annotator + created_at combinations)
+        model_annotators = []
+        for annotation in model_annotations:
+            if annotation.model_annotator:
+                # Create unique identifier for model + timestamp
+                model_id = f"{annotation.model_annotator}_{annotation.created_at.strftime('%Y%m%d_%H%M')}"
+                if model_id not in model_annotators:
+                    model_annotators.append(model_id)
+        
+        if len(model_annotators) < 2:
+            return {"error": "Besoin de 2 modèles annotateurs au moins"}
+        
+        # Create span matrix for model annotations
+        span_matrix = {}
+        for model_id in model_annotators:
+            model_name, timestamp = model_id.split('_', 1)
+            
+            # Find annotations for this specific model and timestamp
+            model_spans = {}
+            for annotation in model_annotations:
+                if (annotation.model_annotator == model_name and 
+                    annotation.created_at.strftime('%Y%m%d_%H%M') == timestamp):
+                    
+                    # Extract spans from llm_json_result
+                    spans = self._extract_spans_from_llm_result(annotation.llm_json_result)
+                    if spans:
+                        model_spans[annotation.decision_id] = spans[0] if spans else None
+        
+            span_matrix[model_id] = [model_spans.get(decision_id, None) for decision_id in decision_ids]
+    
+        return self._calculate_extractive_agreement_metrics(span_matrix, model_annotators, "model")
+
+    def _calculate_human_vs_model_extractive_agreement(self, human_annotations, model_annotations, decision_ids):
+        """Calculate agreement between human and model annotators."""
+        # Get human annotators
+        human_annotators = list(set(human_annotations.values("creator_id").distinct().values_list("creator_id", flat=True).distinct()))
+        
+        # Get model annotators
+        model_annotators = []
+        for annotation in model_annotations:
+            if annotation.model_annotator:
+                model_id = f"{annotation.model_annotator}_{annotation.created_at.strftime('%Y%m%d_%H%M')}"
+                if model_id not in model_annotators:
+                    model_annotators.append(model_id)
+        
+        if not human_annotators or not model_annotators:
+            return {"error": "Besoin des annotateurs humains et modèles"}
+        
+        # Create combined span matrix
+        span_matrix = {}
+        
+        # Add human annotations
+        for annotator in human_annotators:
+            annotator_annotations = human_annotations.filter(creator_id=annotator)
+            span_dict = {a.decision_id: (a.start_offset, a.end_offset) for a in annotator_annotations}
+            span_matrix[f"human_{annotator}"] = [span_dict.get(decision_id, None) for decision_id in decision_ids]
+        
+        # Add model annotations
+        for model_id in model_annotators:
+            model_name, timestamp = model_id.split('_', 1)
+            model_spans = {}
+            
+            for annotation in model_annotations:
+                if (annotation.model_annotator == model_name and 
+                    annotation.created_at.strftime('%Y%m%d_%H%M') == timestamp):
+                    
+                    spans = self._extract_spans_from_llm_result(annotation.llm_json_result)
+                    if spans:
+                        model_spans[annotation.decision_id] = spans[0] if spans else None
+            
+            span_matrix[f"model_{model_id}"] = [model_spans.get(decision_id, None) for decision_id in decision_ids]
+        
+        all_annotators = list(span_matrix.keys())
+        return self._calculate_extractive_agreement_metrics(span_matrix, all_annotators, "human_vs_model")
+
+    def _calculate_overall_extractive_agreement(self, human_annotations, model_annotations, decision_ids):
+        """Calculate overall agreement between all annotators (human + model)."""
+        return self._calculate_human_vs_model_extractive_agreement(human_annotations, model_annotations, decision_ids)
+
+    def _extract_spans_from_llm_result(self, llm_json_result):
+        """Extract spans from the LLM JSON result."""
+        if not llm_json_result:
+            return []
+        
+        spans = []
+        try:
+            # Handle different possible structures of llm_json_result
+            if isinstance(llm_json_result, dict):
+                # Look for common keys that might contain span information
+                for key in ['extractions', 'annotations', 'spans', 'results']:
+                    if key in llm_json_result:
+                        data = llm_json_result[key]
+                        if isinstance(data, list):
+                            for item in data:
+                                span = self._parse_span_from_item(item)
+                                if span:
+                                    spans.append(span)
+                        elif isinstance(data, dict):
+                            span = self._parse_span_from_item(data)
+                            if span:
+                                spans.append(span)
+                
+                # If no specific key found, try to parse the whole object
+                if not spans:
+                    span = self._parse_span_from_item(llm_json_result)
+                    if span:
+                        spans.append(span)
+            
+            elif isinstance(llm_json_result, list):
+                for item in llm_json_result:
+                    span = self._parse_span_from_item(item)
+                    if span:
+                        spans.append(span)
+        
+        except Exception as e:
+            print(f"Error parsing LLM result: {e}")
+            return []
+        
+        return spans
+
+    def _parse_span_from_item(self, item):
+        """Parse a single span from an item in the LLM result."""
+        if not isinstance(item, dict):
+            return None
+        
+        # Look for start and end offset keys (common variations)
+        start_keys = ['start_offset', 'start', 'begin', 'start_pos', 'startOffset']
+        end_keys = ['end_offset', 'end', 'finish', 'end_pos', 'endOffset']
+        
+        start_offset = None
+        end_offset = None
+        
+        for key in start_keys:
+            if key in item and isinstance(item[key], (int, float)):
+                start_offset = int(item[key])
+                break
+        
+        for key in end_keys:
+            if key in item and isinstance(item[key], (int, float)):
+                end_offset = int(item[key])
+                break
+        
+        if start_offset is not None and end_offset is not None and start_offset < end_offset:
+            return (start_offset, end_offset)
+        
+        return None
+
+    def _calculate_extractive_agreement_metrics(self, span_matrix, annotators, annotator_type):
+        """Calculate agreement metrics for extractive annotations using various metrics."""
+        results = {
+            "annotator_type": annotator_type,
+            "num_annotators": len(annotators),
+            "num_decisions": len(next(iter(span_matrix.values()))) if span_matrix else 0,
+            "annotators": annotators
+        }
+        if len(annotators) < 2:
+            return results
+        
+        # Calculate pairwise agreements
+        jaccard_scores = []
+        overlap_scores = []
+        exact_match_scores = []
+        pairwise_results = {}
+        
+        for ann1, ann2 in combinations(annotators, 2):
+            spans1 = span_matrix[ann1]
+            spans2 = span_matrix[ann2]
+            
+            decision_jaccard_scores = []
+            decision_overlap_scores = []
+            decision_exact_matches = []
+            
+            for span1, span2 in zip(spans1, spans2):
+                if span1 is not None and span2 is not None:
+                    jaccard = self._calculate_jaccard(span1, span2)
+                    overlap = self._calculate_overlap(span1, span2)
+                    exact_match = 1.0 if span1 == span2 else 0.0
+                    
+                    decision_jaccard_scores.append(jaccard)
+                    decision_overlap_scores.append(overlap)
+                    decision_exact_matches.append(exact_match)
+            
+            if decision_jaccard_scores:
+                avg_jaccard = np.mean(decision_jaccard_scores)
+                avg_overlap = np.mean(decision_overlap_scores)
+                avg_exact_match = np.mean(decision_exact_matches)
+                
+                jaccard_scores.append(avg_jaccard)
+                overlap_scores.append(avg_overlap)
+                exact_match_scores.append(avg_exact_match)
+                
+                pairwise_results[f"{ann1}_vs_{ann2}"] = {
+                    "jaccard_index": avg_jaccard,
+                    "overlap_coefficient": avg_overlap,
+                    "exact_match_rate": avg_exact_match,
+                    "num_common_annotations": len(decision_jaccard_scores)
+                }
+        
+        results["average_pairwise_jaccard"] = np.mean(jaccard_scores) if jaccard_scores else 0
+        results["average_pairwise_overlap"] = np.mean(overlap_scores) if overlap_scores else 0
+        results["average_exact_match_rate"] = np.mean(exact_match_scores) if exact_match_scores else 0
+        results["pairwise_details"] = pairwise_results
+        
+        # Calculate additional metrics
+        results["agreement_percentage"] = self._calculate_span_agreement_percentage(span_matrix, annotators)
+        
+        return results
+
+    def _calculate_span_agreement_percentage(self, span_matrix, annotators):
+        """Calculate simple agreement percentage for spans."""
+        if len(annotators) < 2:
+            return 0
+        
+        total_items = 0
+        agreed_items = 0
+        
+        n_decisions = len(next(iter(span_matrix.values())))
+        
+        for i in range(n_decisions):
+            # Get all non-None spans for this decision
+            spans = [span_matrix[annotator][i] for annotator in annotators 
+                    if span_matrix[annotator][i] is not None]
+            
+            if len(spans) >= 2:  # Need at least 2 annotations to compare
+                total_items += 1
+                if len(set(spans)) == 1:  # All spans are exactly the same
+                    agreed_items += 1
+        
+        return (agreed_items / total_items * 100) if total_items > 0 else 0
+
+    def _calculate_jaccard(self, span1, span2):
+        """Calculate Jaccard index between two spans."""
+        start1, end1 = span1
+        start2, end2 = span2
+        
+        # Calculate overlap
+        overlap_start = max(start1, start2)
+        overlap_end = min(end1, end2)
+        overlap = max(0, overlap_end - overlap_start)
+        
+        # Calculate union
+        union_start = min(start1, start2)
+        union_end = max(end1, end2)
+        union = union_end - union_start
+        
+        return overlap / union if union > 0 else 0
+
+    def _calculate_overlap(self, span1, span2):
+        """Calculate overlap coefficient between two spans."""
+        start1, end1 = span1
+        start2, end2 = span2
+        
+        # Calculate overlap
+        overlap_start = max(start1, start2)
+        overlap_end = min(end1, end2)
+        overlap = max(0, overlap_end - overlap_start)
+        
+        # Calculate minimum span length
+        min_length = min(end1 - start1, end2 - start2)
+        
+        return overlap / min_length if min_length > 0 else 0
+

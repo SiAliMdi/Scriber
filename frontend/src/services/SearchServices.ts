@@ -12,10 +12,8 @@ const TypesenseClient = new Client({
   nodes: [
     {
       host: `${import.meta.env.VITE_TYPESENSE_HOST}`,
-      port: parseInt(
-        import.meta.env.VITE_TYPESENSE_PORT || "1000"
-      ),
-      protocol: "http",
+      port: parseInt(import.meta.env.VITE_TYPESENSE_PORT || "1000"),
+      protocol: `${import.meta.env.VITE_TYPESENSE_PROTOCOL}`,
     },
   ],
   apiKey: `${import.meta.env.VITE_TYPESENSE_API_KEY}`,
@@ -180,7 +178,7 @@ const search = async (
           id: hit.document.id,
           j_texte: hit.document.j_texte,
           j_chambre: hit.document.j_chambre,
-          j_date:  hit.document.j_date, // Assuming j_date is already in the correct format
+          j_date: hit.document.j_date, // Assuming j_date is already in the correct format
           j_rg: hit.document.j_rg,
           j_ville: hit.document.j_ville,
           j_type: hit.document.j_type,
@@ -207,7 +205,9 @@ const search = async (
 
 const groupedSearch = async (
   searchParameters: SearchParameters,
-  setSearchResult: React.Dispatch<React.SetStateAction<SearchResult>>
+  setSearchResult: React.Dispatch<
+    React.SetStateAction<SearchResult>
+  >
 ): Promise<SearchResult> => {
   try {
     const searchResults = await TypesenseClient.collections(
@@ -217,45 +217,61 @@ const groupedSearch = async (
       .search(searchParameters);
 
     // Process grouped results
-    const groups = searchResults.grouped_hits?.map((group: any) => {
-      // Format group key according to your pattern: "15/05521-ca-paris-2025/01/12-sociale-arret"
-      const [j_rg, j_juridiction, j_ville, j_date, j_chambre, j_type] = group.group_key;
-      
-      // Convert timestamp to formatted date string
-      const date = new Date(parseInt(j_date) * 1000);
-      const formattedDate = `${date.getFullYear()}/${(date.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+    const groups =
+      searchResults.grouped_hits?.map((group: any) => {
+        // Format group key according to your pattern: "15/05521-ca-paris-2025/01/12-sociale-arret"
+        const [
+          j_rg,
+          j_juridiction,
+          j_ville,
+          j_date,
+          j_chambre,
+          j_type,
+        ] = group.group_key;
 
-      // Create the group identifier string
-      const groupKey = `${j_rg}-${j_juridiction}-${j_ville}-${formattedDate}-${j_chambre}-${j_type}`
-        .toLowerCase()
-        .replace(/\s+/g, '-');
+        // Convert timestamp to formatted date string
+        const date = new Date(parseInt(j_date) * 1000);
+        const formattedDate = `${date.getFullYear()}/${(
+          date.getMonth() + 1
+        )
+          .toString()
+          .padStart(2, "0")}/${date
+          .getDate()
+          .toString()
+          .padStart(2, "0")}`;
 
-      // Process hits within the group
-      const hits: Decision[] = group.hits.map((hit: any) => {
-        const document = hit.document;
+        // Create the group identifier string
+        const groupKey =
+          `${j_rg}-${j_juridiction}-${j_ville}-${formattedDate}-${j_chambre}-${j_type}`
+            .toLowerCase()
+            .replace(/\s+/g, "-");
+
+        // Process hits within the group
+        const hits: Decision[] = group.hits.map((hit: any) => {
+          const document = hit.document;
+          return {
+            id: document.id,
+            j_texte: document.j_texte,
+            j_chambre: document.j_chambre,
+            j_date: formattedDate,
+            j_rg: document.j_rg,
+            j_ville: document.j_ville,
+            j_type: document.j_type,
+            j_juridiction: document.j_juridiction,
+            highlight: hit.highlight?.j_texte?.snippet || "",
+          };
+        });
+
         return {
-          id: document.id,
-          j_texte: document.j_texte,
-          j_chambre: document.j_chambre,
-          j_date: formattedDate,
-          j_rg: document.j_rg,
-          j_ville: document.j_ville,
-          j_type: document.j_type,
-          j_juridiction: document.j_juridiction,
-          highlight: hit.highlight?.j_texte?.snippet || '',
+          groupKey,
+          hits,
+          // Add any additional group-level information here
         };
-      });
+      }) || [];
 
-      return {
-        groupKey,
-        hits,
-        // Add any additional group-level information here
-      };
-    }) || [];
-
-    const decisions: Decision[] = groups.map(group => group.hits).flat();
+    const decisions: Decision[] = groups
+      .map((group) => group.hits)
+      .flat();
     const searchResult: SearchResult = {
       hits: decisions,
       found: searchResults.found,
@@ -266,7 +282,6 @@ const groupedSearch = async (
 
     setSearchResult(searchResult);
     return searchResult;
-
   } catch (error) {
     console.error("Error while querying Typesense:", error);
     throw error;

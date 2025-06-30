@@ -86,7 +86,6 @@ class Dataset(views.APIView):
             validated_data = serialized_data.validated_data
             validated_data['creator'] = request.user                
             validated_data['categorie'] = CategoriesModel.objects.get(id=validated_data['categorie'])
-            print('validated_data :', validated_data)
             dataset = DatasetsModel.objects.create(**validated_data)
             dataset = DatasetsSerializer(dataset)
             return response.Response(dataset.data, status=200)

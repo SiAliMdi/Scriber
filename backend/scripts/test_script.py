@@ -59,6 +59,15 @@ def get_typesense_collection(client: typesense.Client):
                 {"name": "j_chambre", "type": "string", "facet": True, "sort": True, "locale": "fr"},
                 {"name": "j_type", "type": "string", "facet": True},
                 {"name": "j_texte", "type": "string", "locale": "fr"},
+                {"name": "embedding", "type": "float[]", "embed": {
+                    "from": ["j_texte"],
+                    "model_config": {
+                        "model_name": settings.MISTRAL_MODEL,
+                        "api_key": settings.LLM_API_KEY,
+                        "url": settings.MISTRAL_API_URL,
+                        }
+                    }
+                 },
             ],
             "default_sorting_field": "j_date"
         })

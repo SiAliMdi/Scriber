@@ -18,7 +18,7 @@ DEBUG = getenv('DEBUG') == 'True'
 
 ALLOWED_HOSTS = getenv('ALLOWED_HOSTS', 'localhost').split(',')
 if not DEBUG:
-    SECURE_PROXY_SSL_HEADER = (a for a in getenv('SECURE_PROXY_SSL_HEADER', '').split(',') if a)
+    SECURE_PROXY_SSL_HEADER = tuple(getenv('SECURE_PROXY_SSL_HEADER', '').split(','))
     SECURE_SSL_REDIRECT = getenv('SECURE_SSL_REDIRECT') == 'True'
     CSRF_COOKIE_SECURE= getenv('CSRF_COOKIE_SECURE',) == 'True'
     SESSION_COOKIE_SECURE= getenv('SESSION_COOKIE_SECURE',) == 'True'
@@ -164,9 +164,50 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 DJANGO_COLORS = "error=red;warning=yellow;success=green;notice=magenta;link=blue,underscore;sql_table=cyan,bold;sql_field=cyan,bold"
 # Some useful commands: py manage check --deploy
-CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ALLOWED_ORIGINS = [getenv('FRONTEND_URL'),]
-CORS_ALLOW_CREDENTIALS = True
+# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = getenv('CORS_ALLOW_CREDENTIALS', 'True').lower() == 'true'
+
+# Handle CORS_ALLOWED_ORIGINS
+cors_origins = getenv('CORS_ALLOWED_ORIGINS', '')
+if cors_origins:
+    CORS_ALLOWED_ORIGINS = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+else:
+    CORS_ALLOWED_ORIGINS = []
+
+# Handle CORS_ORIGIN_WHITELIST (for older django-cors-headers versions)
+cors_whitelist = getenv('CORS_ORIGIN_WHITELIST', '')
+if cors_whitelist:
+    CORS_ORIGIN_WHITELIST = [origin.strip() for origin in cors_whitelist.split(',') if origin.strip()]
+else:
+    CORS_ORIGIN_WHITELIST = []
+
+# Handle CSRF_TRUSTED_ORIGINS
+csrf_origins = getenv('CSRF_TRUSTED_ORIGINS', '')
+if csrf_origins:
+    CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins.split(',') if origin.strip()]
+else:
+    CSRF_TRUSTED_ORIGINS = []
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
 
 class LogMiddleware:
     def __init__(self, get_response):
@@ -209,6 +250,7 @@ LLAMA_API_URL = getenv('LLAMA_API_URL')
 MISTRAL_TAG = getenv('MISTRAL_TAG')
 LLAMA_TAG = getenv('LLAMA_TAG')
 LLM_API_KEY = getenv('LLM_API_KEY')
+MISTRAL_MODEL = getenv('MISTRAL_MODEL')
 
 # LOGGING setup
 DJANGO_ROOT_LOG_PATH = getenv('DJANGO_ROOT_LOG_PATH')
